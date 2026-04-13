@@ -1,0 +1,91 @@
+project_id = "bduwtkejrfmcggfwniqe"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.forex-data]
+verify_jwt = false
+
+[functions.economic-calendar]
+verify_jwt = false
+
+[functions.send-staff-activation-notification]
+verify_jwt = false
+
+[functions.send-password-reset-otp]
+verify_jwt = false
+
+[functions.send-payment-notification]
+verify_jwt = false
+
+[functions.send-staff-invite]
+verify_jwt = false
+
+[functions.verify-password-reset-otp]
+verify_jwt = false
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+[functions.generate-telegram-otp]
+verify_jwt = false
+
+[functions.verify-telegram-otp]
+verify_jwt = false
+
+[functions.ai-support-chat]
+verify_jwt = false
+
+[functions.telegram-support-webhook]
+verify_jwt = false
+
+[functions.telegram-broadcast]
+verify_jwt = false
+
+[functions.ceo-bot-webhook]
+verify_jwt = false
+
+[functions.delivery-bot-webhook]
+verify_jwt = false
+
+[functions.notify-ceo-order]
+verify_jwt = false
+
+[functions.send-reminder-notification]
+verify_jwt = false
+
+[functions.send-test-broadcast]
+verify_jwt = false
+
+[functions.generate-invoice-pdf]
+verify_jwt = false
+
+[functions.encrypt-password]
+verify_jwt = false
+
+[functions.decrypt-password]
+verify_jwt = false
+
+[functions.direct-trade-sync]
+verify_jwt = false
+
+[functions.sync-external-trades]
+verify_jwt = false
+
+[functions.direct-trade-sync]
+verify_jwt = false
+
+[functions.extract-trade]
+verify_jwt = false
+
+[functions.analyze-chart]
+verify_jwt = false
+
+[functions.screenshot-parser]
+verify_jwt = false
+
+[functions.trade-plan-ai]
+verify_jwt = false
+
+[functions.trader-assist-ai]
+verify_jwt = false
