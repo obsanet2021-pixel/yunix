@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Video, ExternalLink, Play, Youtube, Send, Instagram } from "lucide-react";
@@ -149,7 +149,7 @@ export default function HomePage() {
               ))}
             </div>
             <div className="mt-12 text-center">
-              <p className="text-muted-foreground">More courses at <a target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold inline-flex items-center gap-1" href="https://yunix.lovable.app">YUNIX Education<ExternalLink className="h-4 w-4" /></a></p>
+              <p className="text-muted-foreground">More courses at <Link to="/courses" className="text-primary hover:underline font-semibold inline-flex items-center gap-1">YUNIX Education</Link></p>
             </div>
           </div>
         </section>
