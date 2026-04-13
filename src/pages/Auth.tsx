@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { z } from "zod";
 import { Eye, EyeOff, Loader2, ArrowLeft, Send, CheckCircle, MessageCircle, Chrome } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,7 @@ export default function Auth() {
   const isSignupInProgress = useRef(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isEnabled } = useFeatureToggles();
 
   const checkStaffEmail = async (emailToCheck: string) => {
     const { data: staff } = await supabase
@@ -976,25 +978,29 @@ export default function Auth() {
                   {loading ? "Signing in..." : isStaffEmail ? `Sign In as ${staffRoleName}` : "Sign In"}
                 </Button>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                  </div>
-                </div>
+                {isEnabled('google_sign_in') && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                      </div>
+                    </div>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Sign in with Google
-                </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={handleGoogleSignIn}
+                      disabled={loading}
+                    >
+                      <Chrome className="h-4 w-4 mr-2" />
+                      Sign in with Google
+                    </Button>
+                  </>
+                )}
               </form>
             </TabsContent>
             
@@ -1070,25 +1076,29 @@ export default function Auth() {
                   {loading ? "Creating account..." : isStaffEmail ? `Join as ${staffRoleName}` : "Sign Up"}
                 </Button>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                  </div>
-                </div>
+                {isEnabled('google_sign_in') && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                      </div>
+                    </div>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Sign up with Google
-                </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={handleGoogleSignIn}
+                      disabled={loading}
+                    >
+                      <Chrome className="h-4 w-4 mr-2" />
+                      Sign up with Google
+                    </Button>
+                  </>
+                )}
               </form>
             </TabsContent>
           </Tabs>

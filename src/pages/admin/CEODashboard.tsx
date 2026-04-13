@@ -385,6 +385,17 @@ export default function CEODashboard() {
                       onCheckedChange={(checked) => handleToggleChange('partner_program', checked)}
                     />
                   </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Google Sign-In</Label>
+                      <p className="text-sm text-muted-foreground">Show Google Sign-In button on authentication page</p>
+                    </div>
+                    <Switch
+                      checked={toggles.google_sign_in}
+                      onCheckedChange={(checked) => handleToggleChange('google_sign_in', checked)}
+                    />
+                  </div>
                 </div>
               )}
             </CardContent>
