@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { useCapacitor } from "./hooks/use-capacitor";
 import UserLayout from "./components/UserLayout";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/Dashboard";
@@ -78,7 +77,6 @@ import DiscountRules from "./pages/admin/DiscountRules";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  useCapacitor();
   return (
     <Routes>
       {/* Public Routes */}
