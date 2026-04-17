@@ -13,8 +13,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "./ThemeProvider";
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
 
 import MaintenancePage from "@/pages/MaintenancePage";
 import YunixLogo from "./YunixLogo";
@@ -86,11 +84,9 @@ export default function UserLayout() {
   const [isStaff, setIsStaff] = useState(false);
   const [showAddAccountSheet, setShowAddAccountSheet] = useState(false);
 
-  // Native haptic feedback
+  // Native haptic feedback (disabled for web builds)
   const triggerHaptic = async () => {
-    if (Capacitor.isNativePlatform()) {
-      await Haptics.impact({ style: ImpactStyle.Light });
-    }
+    // Haptic feedback only available in native apps
   };
 
   // Filter rewards navigation based on feature toggles
