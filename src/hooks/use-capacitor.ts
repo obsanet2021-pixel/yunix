@@ -1,8 +1,5 @@
 import { useEffect } from 'react';
-import { App } from '@capacitor/app';
-import { StatusBar, Style } from '@capacitor/status-bar';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
 import { useTheme } from '@/components/ThemeProvider';
 
 export const useCapacitor = () => {
@@ -11,29 +8,47 @@ export const useCapacitor = () => {
   const { theme } = useTheme();
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    // Dynamic import to prevent build failures on web
+    const setupCapacitor = async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) return;
 
-    // Handle back button
-    const backButtonListener = App.addListener('backButton', ({ canGoBack }) => {
-      if (canGoBack) {
-        window.history.back();
-      } else {
-        // If no more history, maybe minimize the app
-        App.exitApp();
+        const { App } = await import('@capacitor/app');
+
+        // Handle back button
+        const backButtonListener = App.addListener('backButton', ({ canGoBack }) => {
+          if (canGoBack) {
+            window.history.back();
+          } else {
+            // If no more history, maybe minimize the app
+            App.exitApp();
+          }
+        });
+
+        return backButtonListener;
+      } catch (e) {
+        console.warn('Capacitor not available', e);
+        return null;
       }
-    });
+    };
+
+    const listenerPromise = setupCapacitor();
 
     return () => {
-      backButtonListener.then(l => l.remove());
+      listenerPromise.then(l => l?.remove());
     };
   }, []);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    // Update StatusBar style based on theme
+    // Dynamic import to prevent build failures on web
     const updateStatusBar = async () => {
       try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) return;
+
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
+
         await StatusBar.setStyle({
           style: theme === 'dark' ? Style.Dark : Style.Light,
         });
@@ -47,8 +62,27 @@ export const useCapacitor = () => {
     updateStatusBar();
   }, [theme]);
 
+  useEffect(() => {
+    const getCapacitorInfo = async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        return {
+          isNative: Capacitor.isNativePlatform(),
+          platform: Capacitor.getPlatform(),
+        };
+      } catch (e) {
+        return {
+          isNative: false,
+          platform: 'web',
+        };
+      }
+    };
+
+    getCapacitorInfo();
+  }, []);
+
   return {
-    isNative: Capacitor.isNativePlatform(),
-    platform: Capacitor.getPlatform(),
+    isNative: false,
+    platform: 'web',
   };
 };
