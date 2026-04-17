@@ -1,0 +1,2 @@
+id;code;description;discount_type;discount_value;max_uses;current_uses;min_order_value;max_discount;valid_from;valid_until;is_active;created_by;created_at;updated_at
+4689b20c-56f1-44af-840f-0c4cc37281a3;YUNIX 10;;percentage;5;20;0;;;2026-01-10 00:00:00+00;2026-01-10 00:00:00+00;true;;2026-01-01 08:19:14.005358+00;2026-01-01 08:19:14.005358+00

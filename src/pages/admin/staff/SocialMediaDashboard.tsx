@@ -33,7 +33,7 @@ interface QAStats {
   activeStaff: number;
 }
 
-export default function QADashboard() {
+export default function SocialMediaDashboard() {
   const navigate = useNavigate();
   const { staffData, loading: permLoading } = useStaffPermissions();
   const [stats, setStats] = useState<QAStats>({
@@ -51,21 +51,21 @@ export default function QADashboard() {
   const [loading, setLoading] = useState(true);
   const [qualityIssues, setQualityIssues] = useState<any[]>([]);
 
-  const isQA = staffData?.role?.name === 'QA Specialist' || 
-    staffData?.role?.name === 'QA & Support' || 
+  const isSocialMediaManager = staffData?.role?.name === 'Social Media Manager' || 
+    staffData?.role?.name === 'Marketing' || 
     staffData?.role?.name === 'CEO';
 
   useEffect(() => {
-    if (!permLoading && !isQA) {
+    if (!permLoading && !isSocialMediaManager) {
       navigate('/app/dashboard');
     }
-  }, [isQA, permLoading, navigate]);
+  }, [isSocialMediaManager, permLoading, navigate]);
 
   useEffect(() => {
-    if (isQA) {
+    if (isSocialMediaManager) {
       loadStats();
     }
-  }, [isQA]);
+  }, [isSocialMediaManager]);
 
   const loadStats = async () => {
     try {
@@ -156,7 +156,7 @@ export default function QADashboard() {
     );
   }
 
-  if (!isQA) {
+  if (!isSocialMediaManager) {
     return null;
   }
 
@@ -187,9 +187,9 @@ export default function QADashboard() {
         </div>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-600 bg-clip-text text-transparent">
-            QA Dashboard
+            Social Media Dashboard
           </h1>
-          <p className="text-muted-foreground">Quality Assurance & System Health</p>
+          <p className="text-muted-foreground">Social Media Management & Analytics</p>
         </div>
       </div>
 

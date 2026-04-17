@@ -10,6 +10,7 @@ interface FeatureToggles {
   bridge_settings: boolean;
   activity_log: boolean;
   google_sign_in: boolean;
+  invitation_contest: boolean;
 }
 
 const DEFAULT_TOGGLES: FeatureToggles = {
@@ -21,6 +22,7 @@ const DEFAULT_TOGGLES: FeatureToggles = {
   bridge_settings: true,
   activity_log: true,
   google_sign_in: false,
+  invitation_contest: false,
 };
 
 export function useFeatureToggles() {

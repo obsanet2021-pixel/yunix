@@ -13,6 +13,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "./ThemeProvider";
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
 
 import MaintenancePage from "@/pages/MaintenancePage";
 import YunixLogo from "./YunixLogo";
@@ -83,6 +85,13 @@ export default function UserLayout() {
   const [staffRoleName, setStaffRoleName] = useState<string | null>(null);
   const [isStaff, setIsStaff] = useState(false);
   const [showAddAccountSheet, setShowAddAccountSheet] = useState(false);
+
+  // Native haptic feedback
+  const triggerHaptic = async () => {
+    if (Capacitor.isNativePlatform()) {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    }
+  };
 
   // Filter rewards navigation based on feature toggles
   const filteredRewardsNavigation = rewardsNavigation.filter(item => {
@@ -291,7 +300,7 @@ export default function UserLayout() {
                       ? "bg-primary text-primary-foreground shadow-md" 
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   )} 
-                  onClick={() => setSidebarOpen(false)}
+                  onClick={() => { setSidebarOpen(false); triggerHaptic(); }}
                   title={sidebarCollapsed ? item.name : undefined}
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
@@ -321,7 +330,7 @@ export default function UserLayout() {
                           ? "bg-primary text-primary-foreground shadow-md" 
                           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       )} 
-                      onClick={() => setSidebarOpen(false)}
+                      onClick={() => { setSidebarOpen(false); triggerHaptic(); }}
                       title={sidebarCollapsed ? item.name : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
@@ -345,7 +354,7 @@ export default function UserLayout() {
                     ? "bg-primary text-primary-foreground shadow-md" 
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )} 
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => { setSidebarOpen(false); triggerHaptic(); }}
                 title={sidebarCollapsed ? "Help Center" : undefined}
               >
                 <HelpCircle className="h-5 w-5 shrink-0" />
@@ -404,7 +413,7 @@ export default function UserLayout() {
                 <Link to="/app/profile">
                   <Button 
                     variant="ghost" 
-                    onClick={() => setSidebarOpen(false)} 
+                    onClick={() => { setSidebarOpen(false); triggerHaptic(); }}
                     className="w-full justify-start hover:bg-muted/50 rounded-xl"
                   >
                     <UserCog className="mr-3 h-5 w-5" />
@@ -430,7 +439,7 @@ export default function UserLayout() {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => setSidebarOpen(false)} 
+                    onClick={() => { setSidebarOpen(false); triggerHaptic(); }}
                     className="w-full hover:bg-muted/50 rounded-xl"
                     title="Profile"
                   >
@@ -496,7 +505,7 @@ export default function UserLayout() {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border/50 px-2 py-1.5 lg:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border/50 px-2 py-1.5 lg:hidden pb-safe">
           <div className="flex items-center justify-around">
             {[
               { icon: LayoutDashboard, label: "Home", href: "/app/dashboard" },
@@ -511,7 +520,7 @@ export default function UserLayout() {
                 return (
                   <button
                     key={item.label}
-                    onClick={() => setShowAddAccountSheet(true)}
+                    onClick={() => { setShowAddAccountSheet(true); triggerHaptic(); }}
                     className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors min-w-[48px] relative text-muted-foreground"
                   >
                     <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center -mt-4 shadow-lg">
@@ -526,6 +535,7 @@ export default function UserLayout() {
                 <Link
                   key={item.label}
                   to={item.href}
+                  onClick={triggerHaptic}
                   className={cn(
                     "flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors min-w-[48px]",
                     isActive ? "text-primary" : "text-muted-foreground"
@@ -545,14 +555,14 @@ export default function UserLayout() {
         <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setShowAddAccountSheet(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div 
-            className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-300"
+            className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom duration-300 pb-safe"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto" />
             <h3 className="text-lg font-semibold text-center">Add New Account</h3>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => { setShowAddAccountSheet(false); navigate('/app/prop-firms?add=propfirm'); }}
+                onClick={() => { setShowAddAccountSheet(false); triggerHaptic(); navigate('/app/prop-firms?add=propfirm'); }}
                 className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors"
               >
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -561,7 +571,7 @@ export default function UserLayout() {
                 <span className="text-sm font-medium text-center">Prop Firm Account</span>
               </button>
               <button
-                onClick={() => { setShowAddAccountSheet(false); navigate('/app/prop-firms?add=personal'); }}
+                onClick={() => { setShowAddAccountSheet(false); triggerHaptic(); navigate('/app/prop-firms?add=personal'); }}
                 className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors"
               >
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -570,7 +580,7 @@ export default function UserLayout() {
                 <span className="text-sm font-medium text-center">Personal Account</span>
               </button>
             </div>
-            <Button variant="ghost" className="w-full" onClick={() => setShowAddAccountSheet(false)}>Cancel</Button>
+            <Button variant="ghost" className="w-full" onClick={() => { setShowAddAccountSheet(false); triggerHaptic(); }}>Cancel</Button>
           </div>
         </div>
       )}

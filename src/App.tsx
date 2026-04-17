@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { useCapacitor } from "./hooks/use-capacitor";
 import UserLayout from "./components/UserLayout";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/Dashboard";
@@ -69,11 +70,102 @@ import DeliveryBotManagement from "./pages/admin/DeliveryBotManagement";
 import Loyalty from "./pages/Loyalty";
 import Partners from "./pages/Partners";
 import Payouts from "./pages/Payouts";
+import InvitationContest from "./pages/InvitationContest";
 import LoyaltyOperations from "./pages/admin/LoyaltyOperations";
 import PartnerOperations from "./pages/admin/PartnerOperations";
 import DiscountRules from "./pages/admin/DiscountRules";
 
 const queryClient = new QueryClient();
+
+const AppContent = () => {
+  useCapacitor();
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/landing" element={<Landing />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/accept-invite" element={<AcceptInvite />} />
+      <Route path="/auth/update-password" element={<UpdatePassword />} />
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/careers" element={<Careers />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/cookies" element={<CookiePolicy />} />
+      <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+
+      {/* User App Routes (Protected) - USER Layout */}
+      <Route path="/app" element={<UserLayout />}>
+        <Route index element={<Welcome />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="trade-management" element={<TradeManagement />} />
+        <Route path="trade-journal" element={<TradeJournal />} />
+        <Route path="journal/:id" element={<JournalDetail />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="backtesting" element={<Backtesting />} />
+        <Route path="backtest-sessions" element={<BacktestSessions />} />
+        <Route path="backtest-replay/:sessionId" element={<BacktestReplay />} />
+        <Route path="prop-firms" element={<PropFirms />} />
+        <Route path="prop-firms/:id" element={<PropFirmDetail />} />
+        <Route path="certificates" element={<Certificates />} />
+        <Route path="calendar" element={<EconomicCalendar />} />
+        <Route path="ai-chat" element={<AIChat />} />
+        <Route path="trade-planner" element={<TradePlanner />} />
+        <Route path="sessions" element={<Sessions />} />
+        <Route path="courses" element={<Courses />} />
+        <Route path="courses/:slug" element={<CourseView />} />
+        <Route path="profile" element={<UserProfile />} />
+        <Route path="support" element={<UserSupport />} />
+        <Route path="orders" element={<UserOrders />} />
+        <Route path="orders/:id" element={<OrderDetail />} />
+        <Route path="help" element={<HelpCenter />} />
+        <Route path="loyalty" element={<Loyalty />} />
+        <Route path="partners" element={<Partners />} />
+        <Route path="payouts" element={<Payouts />} />
+        <Route path="contest" element={<InvitationContest />} />
+      </Route>
+
+      {/* Admin Routes (Protected) - ADMIN Layout */}
+      <Route path="/app/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate to="/app/admin/ceo" replace />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="ceo" element={<CEODashboard />} />
+        <Route path="staff" element={<StaffDashboard />} />
+        <Route path="staff-management" element={<StaffManagement />} />
+        <Route path="roles" element={<RoleManagement />} />
+        <Route path="settings" element={<SystemSettings />} />
+        <Route path="finance" element={<AdminFinance />} />
+        <Route path="support" element={<AdminSupport />} />
+        <Route path="plaque-orders" element={<PlaqueOrdersManagement />} />
+        <Route path="telegram-bot" element={<TelegramBotManagement />} />
+        <Route path="telegram-updates" element={<TelegramBroadcasts />} />
+        <Route path="ceo-bot" element={<CEOBotManagement />} />
+        <Route path="delivery-bot" element={<DeliveryBotManagement />} />
+        <Route path="loyalty-operations" element={<LoyaltyOperations />} />
+        <Route path="partner-operations" element={<PartnerOperations />} />
+        <Route path="discount-rules" element={<DiscountRules />} />
+
+        {/* Staff Role Dashboards */}
+        <Route path="staff/coo" element={<COODashboard />} />
+        <Route path="staff/cto" element={<CTODashboard />} />
+        <Route path="staff/cfo" element={<CFODashboard />} />
+        <Route path="staff/course-manager" element={<CourseManagerDashboard />} />
+        <Route path="staff/support" element={<SupportDashboard />} />
+        <Route path="staff/qa" element={<QADashboard />} />
+        <Route path="staff/data-analyst" element={<DataAnalystDashboard />} />
+        <Route path="staff/marketing" element={<MarketingDashboard />} />
+        <Route path="staff/social-media" element={<SocialMediaDashboard />} />
+        <Route path="staff/plaque-orders" element={<PlaqueOrdersDashboard />} />
+        <Route path="staff/analytics" element={<AnalyticsDashboard />} />
+      </Route>
+
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -82,89 +174,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/accept-invite" element={<AcceptInvite />} />
-            <Route path="/auth/update-password" element={<UpdatePassword />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/careers" element={<Careers />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/cookies" element={<CookiePolicy />} />
-            <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-            
-            {/* User App Routes (Protected) - USER Layout */}
-            <Route path="/app" element={<UserLayout />}>
-              <Route index element={<Welcome />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="trade-management" element={<TradeManagement />} />
-              <Route path="trade-journal" element={<TradeJournal />} />
-              <Route path="journal/:id" element={<JournalDetail />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="backtesting" element={<Backtesting />} />
-              <Route path="backtest-sessions" element={<BacktestSessions />} />
-              <Route path="backtest-replay/:sessionId" element={<BacktestReplay />} />
-              <Route path="prop-firms" element={<PropFirms />} />
-              <Route path="prop-firms/:id" element={<PropFirmDetail />} />
-              <Route path="certificates" element={<Certificates />} />
-              <Route path="calendar" element={<EconomicCalendar />} />
-              <Route path="ai-chat" element={<AIChat />} />
-              <Route path="trade-planner" element={<TradePlanner />} />
-              <Route path="sessions" element={<Sessions />} />
-              <Route path="courses" element={<Courses />} />
-              <Route path="courses/:slug" element={<CourseView />} />
-              <Route path="profile" element={<UserProfile />} />
-              <Route path="support" element={<UserSupport />} />
-              <Route path="orders" element={<UserOrders />} />
-              <Route path="orders/:id" element={<OrderDetail />} />
-              <Route path="help" element={<HelpCenter />} />
-              <Route path="loyalty" element={<Loyalty />} />
-              <Route path="partners" element={<Partners />} />
-              <Route path="payouts" element={<Payouts />} />
-            </Route>
-            
-            {/* Admin Routes (Protected) - ADMIN Layout */}
-            <Route path="/app/admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="/app/admin/ceo" replace />} />
-              <Route path="profile" element={<AdminProfile />} />
-              <Route path="ceo" element={<CEODashboard />} />
-              <Route path="staff" element={<StaffDashboard />} />
-              <Route path="staff-management" element={<StaffManagement />} />
-              <Route path="roles" element={<RoleManagement />} />
-              <Route path="settings" element={<SystemSettings />} />
-              <Route path="finance" element={<AdminFinance />} />
-              <Route path="support" element={<AdminSupport />} />
-              <Route path="plaque-orders" element={<PlaqueOrdersManagement />} />
-              <Route path="telegram-bot" element={<TelegramBotManagement />} />
-              <Route path="telegram-updates" element={<TelegramBroadcasts />} />
-              <Route path="ceo-bot" element={<CEOBotManagement />} />
-              <Route path="delivery-bot" element={<DeliveryBotManagement />} />
-              <Route path="loyalty-operations" element={<LoyaltyOperations />} />
-              <Route path="partner-operations" element={<PartnerOperations />} />
-              <Route path="discount-rules" element={<DiscountRules />} />
-              
-              {/* Staff Role Dashboards */}
-              <Route path="staff/coo" element={<COODashboard />} />
-              <Route path="staff/cto" element={<CTODashboard />} />
-              <Route path="staff/cfo" element={<CFODashboard />} />
-              <Route path="staff/course-manager" element={<CourseManagerDashboard />} />
-              <Route path="staff/support" element={<SupportDashboard />} />
-              <Route path="staff/qa" element={<QADashboard />} />
-              <Route path="staff/data-analyst" element={<DataAnalystDashboard />} />
-              <Route path="staff/marketing" element={<MarketingDashboard />} />
-              <Route path="staff/social-media" element={<SocialMediaDashboard />} />
-              <Route path="staff/plaque-orders" element={<PlaqueOrdersDashboard />} />
-              <Route path="staff/analytics" element={<AnalyticsDashboard />} />
-            </Route>
-            
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppContent />
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

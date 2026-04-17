@@ -1,0 +1,17 @@
+-- Phase 2 Migration: Certificates Data
+-- Insert certificates data from CSV export
+-- Note: CEO user ID (729edbb5-3a37-4b62-b20b-2480dc5c7b2a) has been updated to (ec850929-598f-41b3-a23c-7f0ceb464b8c)
+
+INSERT INTO certificates (id, user_id, title, description, file_url, file_type, prop_firm_id, issued_date, created_at, updated_at) VALUES
+('af0cf914-772d-4596-9d72-16c8be99568f', 'ec850929-598f-41b3-a23c-7f0ceb464b8c', 'NOSTRO', 'PHASE 2 CERTIFICATE', 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/729edbb5-3a37-4b62-b20b-2480dc5c7b2a/1761013367091.jpg', 'image/jpeg', NULL, '2025-10-09', '2025-10-21 02:22:49.724432+00', '2025-10-21 02:22:49.724432+00'),
+('c275ea05-89e9-44db-a959-6d210b354e67', 'ec850929-598f-41b3-a23c-7f0ceb464b8c', 'QT', 'QUANT TEKEL- PHASE 1 - DONE ', 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/729edbb5-3a37-4b62-b20b-2480dc5c7b2a/1761206994704.jpg', 'image/jpeg', NULL, '2025-10-23', '2025-10-23 08:09:57.658714+00', '2025-10-23 08:09:57.658714+00'),
+('c5abf2e2-6420-4717-8002-9578c2f838e7', 'ec850929-598f-41b3-a23c-7f0ceb464b8c', 'EQUITY EDGE', 'FUNDED TRADER', 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/729edbb5-3a37-4b62-b20b-2480dc5c7b2a/1762229432255.png', 'image/png', NULL, '2025-10-21', '2025-11-04 04:10:39.681015+00', '2025-11-04 04:10:39.681015+00'),
+('a308b106-c30b-4343-a0d9-844fe0f91426', 'ec850929-598f-41b3-a23c-7f0ceb464b8c', 'NOSTRO', 'FUNDED TRADER', 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/729edbb5-3a37-4b62-b20b-2480dc5c7b2a/1764070378966.jpg', 'image/jpeg', NULL, '2025-11-25', '2025-11-25 11:33:01.769791+00', '2025-11-25 11:33:01.769791+00'),
+('11303577-7f91-41bb-9766-e7afb925e593', 'fc1a20a7-df28-4a2a-b16c-f5adf45f1291', 'Maven', 'Maven certificate', 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/fc1a20a7-df28-4a2a-b16c-f5adf45f1291/1764952242514.png', 'image/png', NULL, '2025-10-18', '2025-12-05 16:30:42.381516+00', '2025-12-05 16:30:42.381516+00'),
+('6b9dc934-d34c-4b6f-862c-625349d4f137', 'e8fd3f47-f082-479d-b70f-c1f793ff91c8', 'Vebson', NULL, 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/e8fd3f47-f082-479d-b70f-c1f793ff91c8/1765041602547.jpg', 'image/jpeg', NULL, '2025-10-06', '2025-12-06 17:20:03.013838+00', '2025-12-06 17:20:03.013838+00'),
+('0a0be2f2-afe1-43c2-829f-ece8c7b1651d', '18500679-9563-4266-bbd5-a14d1306147a', 'FTMO', NULL, 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/18500679-9563-4266-bbd5-a14d1306147a/1765088913460.jpeg', 'image/jpeg', NULL, '2025-12-04', '2025-12-07 06:28:34.446557+00', '2025-12-07 06:28:34.446557+00'),
+('2b44b5df-90ce-44cd-9efd-44492b57efbd', 'e8fd3f47-f082-479d-b70f-c1f793ff91c8', 'upcomers', NULL, 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/e8fd3f47-f082-479d-b70f-c1f793ff91c8/1775148544857.jpg', 'image/jpeg', NULL, '2026-04-02', '2026-04-02 16:49:01.708097+00', '2026-04-02 16:49:01.708097+00'),
+('40cecb82-5f52-4cab-ba7d-8012d24fe68c', 'e8fd3f47-f082-479d-b70f-c1f793ff91c8', 'Funded Next', NULL, 'https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/certificates/e8fd3f47-f082-479d-b70f-c1f793ff91c8/1775557580159.jpg', 'image/jpeg', NULL, '2026-04-07', '2026-04-07 10:26:21.681288+00', '2026-04-07 10:26:21.681288+00');
+
+-- Verify insertion
+SELECT COUNT(*) as certificates_count FROM certificates;

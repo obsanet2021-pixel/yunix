@@ -1,0 +1,3 @@
+id;telegram_chat_id;is_active;created_at;updated_at;group_chat_id;auto_notify_new_orders
+52bf080c-bcb2-4bdf-8f5d-c7e7ac70d76f;5543308273;false;2025-12-21 12:11:37.152574+00;2025-12-22 13:33:22.465489+00;	-1003611449794;true
+b780122f-35c3-43a6-9fe8-90dcb3cb33ff;	-1003611449794;true;2025-12-22 13:33:22.516665+00;2025-12-22 13:33:22.516665+00;;true

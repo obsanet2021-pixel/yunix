@@ -1,0 +1,13 @@
+id;key;value;description;updated_at;updated_by
+4e1f015c-9680-4fdc-b7b2-cd156b275c2b;loyalty_percentage;"{""value"":50}";Percentage discount for loyalty reward (10th order);2026-01-01 10:22:05.801+00;
+fbc48a49-fd4f-409f-b2ec-dbcca9d52987;loyalty_cap;"{""value"":25}";Maximum discount cap for loyalty in USD;2026-01-01 10:22:06.329+00;
+237734aa-b704-4f3a-a78b-106a8d63b1aa;loyalty_threshold;"{""value"":4}";Number of orders needed before discount unlocks;2026-01-01 10:22:06.642+00;
+250add9b-fad0-47f0-b488-921181d4516f;affiliate_percentage_tier1;"{""value"":60}";Tier 1 affiliate discount percentage;2026-01-01 10:22:06.95+00;
+5c429407-f972-4058-99e4-92fe5d8d270c;affiliate_percentage_tier2;"{""value"":65}";Tier 2 affiliate discount percentage;2026-01-01 10:22:07.297+00;
+13051499-cbe8-46c4-afb8-4f494f2519b8;affiliate_cap;"{""value"":25}";Maximum discount cap for affiliate in USD;2026-01-01 10:22:07.608+00;
+06244554-2730-4ab5-808a-61a5d122ba21;affiliate_conversion_threshold;"{""value"":3}";Number of qualified referrals needed;2026-01-01 10:22:07.952+00;
+11b40503-8c9f-4f88-a2f0-2b7c0251235e;stack_prevention_enabled;"{""value"":true}";Prevent stacking of discounts;2026-01-01 10:22:08.263+00;
+cc2f5c8f-956d-4a1d-a1fd-0cfb76dc3e1a;first_order_discount_percentage;"{""value"":50}";Discount percentage for first order;2026-01-01 10:22:08.597+00;
+3b5a1441-a3d6-40eb-8a0a-b6c7764380fd;first_order_discount_enabled;"{""value"":false}";Enable discount for first order;2026-01-01 10:22:08.926+00;
+01464f2d-2ca9-41a7-9b25-6767835facb2;sixth_order_free;"{""value"":true}";Make 6th order completely free;2026-01-01 10:22:09.231+00;
+6b6bae00-cd27-4107-a492-04f9bd3821d2;sixth_order_threshold;"{""value"":6}";Which order number is free (6th order);2026-01-01 10:22:09.541+00;

@@ -1,0 +1,21 @@
+-- Phase 1 Migration: Staff
+-- Run this in Supabase SQL Editor AFTER admin_roles and profiles migration
+-- This imports staff from the exported CSV
+
+-- Clear existing staff (optional - uncomment if needed)
+-- TRUNCATE TABLE staff CASCADE;
+
+INSERT INTO staff (id, user_id, name, email, role_id, status, invited_at, created_at, updated_at, invite_token) VALUES
+('2e626177-60e3-4b08-b78b-5c0c04cbb9bd', 'd03c351c-765d-417b-b19e-f03e74024411', 'Fanuel', 'fanutare2@gmail.com', 'b90ae454-1d04-452a-850b-b8fd678a14eb', 'active', '2025-12-16 17:48:57.063711+00', '2025-12-16 17:48:57.063711+00', '2025-12-24 08:23:32.55635+00', '44bfdfa5-b721-4309-b20b-87b622bb025e'),
+('d178b150-98bd-4303-883d-a46ae7f2b5f9', '8ce5b5c6-e0fc-4f31-80a3-db588576718f', 'Ahmad Muhammad', 'proahm4da@gmail.com', '6e21df9b-c639-4efe-aa77-f5b498e64681', 'active', '2025-12-07 11:45:51.292+00', '2025-12-07 11:45:51.779581+00', '2025-12-18 04:11:08.337408+00', '7ef26d31631c400ba6d96ec3948b7515mivnp9g7'),
+('09995ea3-6e2a-4827-852d-c86e1eb5b769', '616f2a58-669b-4c40-822e-adfef7058906', 'Zuber Harun', 'roythegentalman@gmail.com', '47c054ce-a58a-47be-bad3-f6a5a08ede06', 'active', '2025-12-04 03:05:11.803+00', '2025-12-04 03:05:12.183972+00', '2026-01-16 17:29:06.128386+00', 'cc1e6517-602c-4ef1-a0e3-16a9b29b0b00'),
+('8a5c2587-4b1a-4836-9a4e-52bd5a513abf', 'e8fd3f47-f082-479d-b70f-c1f793ff91c8', 'Awel ', 'aawel630@gmail.com', 'c78ccef9-ac0a-418e-b24f-6c3ed1f0827b', 'active', '2025-12-04 06:15:30.176+00', '2025-12-04 06:15:31.636566+00', '2025-12-28 12:01:38.149263+00', '47b82b17e6be4c9aa44ea7a7eeb5c93amir1kws0'),
+('ffb7dbac-68cf-4124-8b66-7a57ac81d7fa', '4ab475bf-af84-4668-ae7a-08da6a4022b1', 'salih zeynu', 'salihzeynu1@gmail.com', '5579bd6d-75c3-46c0-a404-bfc6835473c2', 'active', '2025-12-04 04:30:23.872+00', '2025-12-04 04:30:25.333865+00', '2025-12-18 19:22:15.883981+00', NULL),
+('1f001cea-bb21-484f-aaef-d31698596a34', '58beeaf5-8028-48b8-996f-45085b85b34e', 'ali abdisa', 'alicreative.891@gmail.com', '8ad77013-6f10-44bb-a18e-dfcb00f2f288', 'active', '2025-12-21 15:43:42.476+00', '2025-12-21 15:43:43.536021+00', '2025-12-28 12:04:31.57277+00', NULL),
+('bd76cf66-1013-4bc8-821e-49ad962f0fdc', 'df29fd2b-f8b3-4bc0-890f-a4f62208c03a', 'Hayleab', 'hailabdawit134@gmail.com', 'e5736789-6e79-4049-a58d-a60dff6407e2', 'active', '2025-12-16 17:49:31.907626+00', '2025-12-16 17:49:31.907626+00', '2026-03-23 10:52:31.189687+00', 'c107f083-1a0e-4251-80a5-ec4d6522d9da'),
+('df379e36-3098-4638-96b0-a0a8cf8ec464', '0a0c8b07-dfb8-4ad1-a62f-f2cf50cb03b6', 'Muhammad Musa', 'top100gmom@gmail.com', 'e5736789-6e79-4049-a58d-a60dff6407e2', 'active', '2025-12-04 03:08:05.792+00', '2025-12-04 03:08:06.042491+00', '2025-12-19 06:25:15.530699+00', NULL),
+('29a9ad7a-54a9-4b8c-96b7-ece10db0945d', 'fc1a20a7-df28-4a2a-b16c-f5adf45f1291', 'Nuradin Abdisa', 'nuredinabdisa596@gmail.com', '4ef14ce6-660f-48a6-a81e-a8af12465b16', 'active', '2025-12-04 03:13:13.763+00', '2025-12-04 03:13:14.118404+00', '2025-12-28 18:04:17.512347+00', NULL),
+('34bfb150-3c4b-442d-b8ac-3bb6e2414706', NULL, 'Hamza', 'hamzloon@gmail.com', '47c054ce-a58a-47be-bad3-f6a5a08ede06', 'active', '2025-12-16 17:48:10.495482+00', '2025-12-16 17:48:10.495482+00', '2025-12-18 05:21:15.537733+00', '70176dcc-a24f-41b1-8919-ce9e4163e367'),
+('f0fd2e60-b905-47f4-a0d6-a3475f1a93a5', '729edbb5-3a37-4b62-b20b-2480dc5c7b2a', 'Obsen', 'obsanet2021@gmail.com', '2934c9d6-c951-4a41-af17-f1268d53c3dc', 'active', '2025-12-02 02:11:42.016837+00', '2025-12-02 02:11:42.016837+00', '2026-04-14 04:03:04.289263+00', '7285adc4-4ca8-4ebe-a6e5-4de16e4d72e6'),
+('4dd75bc1-1e20-49c2-945c-ae8230db017f', '40a60634-cc05-4f0f-a502-748eee45c314', 'Ramadan Muhammad', 'remadanmohammed5@gmail.com', '4ef14ce6-660f-48a6-a81e-a8af12465b16', 'active', '2025-12-04 03:07:07.104+00', '2025-12-04 03:07:07.530018+00', '2025-12-30 06:45:45.935955+00', NULL),
+('53c69f8a-e84b-4acd-b01d-235e5227fb2e', 'e175a88c-5a5a-4fca-b7ae-942ef889ca62', 'huneyif', 'huneyifa@gmail.com', '5bca9b8c-0b84-4d4b-92bf-59008b2caa00', 'active', '2025-12-17 08:46:33.181861+00', '2025-12-17 08:46:33.181861+00', '2025-12-31 05:38:51.417691+00', NULL);

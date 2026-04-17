@@ -82,6 +82,10 @@
 
     --tracking-normal: 0em;
     --spacing: 0.25rem;
+
+    /* Mobile Safe Area */
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
   }
 
   .dark {
@@ -154,8 +158,16 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased min-h-screen;
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
   }
+
+  /* Mobile Safe Area Utilities */
+  .pt-safe { padding-top: var(--safe-area-top); }
+  .pb-safe { padding-bottom: var(--safe-area-bottom); }
+  .mt-safe { margin-top: var(--safe-area-top); }
+  .mb-safe { margin-bottom: var(--safe-area-bottom); }
 
   /* Premium Card Styling */
   .glow-card {
