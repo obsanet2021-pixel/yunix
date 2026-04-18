@@ -41,7 +41,6 @@ const userNavigation = [
 const rewardsNavigation = [
   { name: "Loyalty Rewards", href: "/app/loyalty", icon: Gift },
   { name: "Partner Program", href: "/app/partners", icon: Users },
-  { name: "Invitation Contest", href: "/app/contest", icon: Trophy },
 ];
 
 const roleRoutes: Record<string, string> = {
@@ -94,7 +93,6 @@ export default function UserLayout() {
   const filteredRewardsNavigation = rewardsNavigation.filter(item => {
     if (item.href === '/app/loyalty') return isEnabled('loyalty_program');
     if (item.href === '/app/partners') return isEnabled('partner_program');
-    if (item.href === '/app/contest') return isEnabled('invitation_contest');
     return true;
   });
   
