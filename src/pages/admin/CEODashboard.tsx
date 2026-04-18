@@ -27,7 +27,11 @@ import {
   Radio,
   Bot,
   Truck,
-  ToggleLeft
+  ToggleLeft,
+  TrendingUp,
+  TrendingDown,
+  Trophy,
+  Calendar
 } from 'lucide-react';
 import { PlaqueOrdersWidget } from '@/components/admin/PlaqueOrdersWidget';
 import RoleManagementPanel from '@/components/admin/RoleManagementPanel';
@@ -37,6 +41,14 @@ interface DashboardStats {
   totalMembers: number;
   totalRevenue: number;
   pendingInvoices: number;
+}
+
+interface TradingMetrics {
+  totalPnL: number;
+  winRate: number;
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
 }
 
 export default function CEODashboard() {
@@ -49,6 +61,13 @@ export default function CEODashboard() {
     totalMembers: 0,
     totalRevenue: 0,
     pendingInvoices: 0
+  });
+  const [tradingMetrics, setTradingMetrics] = useState<TradingMetrics>({
+    totalPnL: 0,
+    winRate: 0,
+    totalTrades: 0,
+    winningTrades: 0,
+    losingTrades: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -80,21 +99,37 @@ export default function CEODashboard() {
 
   const loadStats = async () => {
     try {
-      const [staffResult, profilesResult, plaqueResult] = await Promise.all([
+      const [staffResult, profilesResult, plaqueResult, tradesResult] = await Promise.all([
         supabase.from('staff').select('id'),
         supabase.from('profiles').select('id'),
-        supabase.from('plaque_orders').select('id, status')
+        supabase.from('plaque_orders').select('id, status'),
+        supabase.from('trades').select('profit')
       ]);
 
       const staffData = staffResult.data || [];
       const profilesData = profilesResult.data || [];
       const plaqueData = plaqueResult.data || [];
+      const tradesData = tradesResult.data || [];
+
+      const totalPnL = tradesData.reduce((sum, trade) => sum + (trade.profit || 0), 0);
+      const winningTrades = tradesData.filter(t => (t.profit || 0) > 0).length;
+      const losingTrades = tradesData.filter(t => (t.profit || 0) < 0).length;
+      const totalTrades = tradesData.length;
+      const winRate = totalTrades > 0 ? ((winningTrades / totalTrades) * 100) : 0;
 
       setStats({
         totalStaff: staffData.length,
         totalMembers: profilesData.length,
         totalRevenue: 0,
         pendingInvoices: plaqueData.filter(p => p.status === 'Pending').length
+      });
+
+      setTradingMetrics({
+        totalPnL,
+        winRate,
+        totalTrades,
+        winningTrades,
+        losingTrades
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -120,6 +155,13 @@ export default function CEODashboard() {
     { title: 'Total Members', value: stats.totalMembers, icon: Activity, color: 'text-green-400' },
     { title: 'Total Revenue', value: `$${stats.totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-yellow-400' },
     { title: 'Pending Orders', value: stats.pendingInvoices, icon: Clock, color: 'text-red-400' },
+  ];
+
+  const tradingCards = [
+    { title: 'Total PnL', value: `$${tradingMetrics.totalPnL.toFixed(2)}`, icon: tradingMetrics.totalPnL >= 0 ? TrendingUp : TrendingDown, color: tradingMetrics.totalPnL >= 0 ? 'text-green-400' : 'text-red-400' },
+    { title: 'Win Rate', value: `${tradingMetrics.winRate.toFixed(1)}%`, icon: Trophy, color: 'text-purple-400' },
+    { title: 'Total Trades', value: tradingMetrics.totalTrades, icon: BarChart3, color: 'text-blue-400' },
+    { title: 'Win/Loss', value: `${tradingMetrics.winningTrades}W/${tradingMetrics.losingTrades}L`, icon: Activity, color: 'text-orange-400' },
   ];
 
   const staffDashboards = [
@@ -175,6 +217,28 @@ export default function CEODashboard() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Trading Metrics Grid */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Trading Performance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {tradingCards.map((stat) => (
+            <Card key={stat.title} className="bg-card/50 backdrop-blur-xl border-border/50 hover:border-primary/30 transition-all">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                  </div>
+                  <div className={`p-3 rounded-xl bg-background/50 ${stat.color}`}>
+                    <stat.icon className="h-6 w-6" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Tabs for different sections */}
