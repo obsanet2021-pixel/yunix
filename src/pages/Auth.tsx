@@ -156,10 +156,10 @@ export default function Auth() {
     }
   };
 
-  // STEP 1: Send verification code - check if user has Telegram linked
+  // STEP 1: Send verification code - TEMPORARILY DISABLED OTP
   const handleSendVerificationCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes('@')) {
       toast({
         title: "Email required",
@@ -169,32 +169,37 @@ export default function Auth() {
       return;
     }
 
+    // TEMPORARY: Skip OTP verification and go directly to new password
     setLoading(true);
     try {
-      const response = await supabase.functions.invoke('generate-telegram-otp', {
-        body: { email, purpose: 'password_reset' }
-      });
+      // Check if user exists in profiles table
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .eq("email", email.toLowerCase())
+        .single();
 
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      const { telegramLink: link, alreadyLinked, otpSent } = response.data;
-
-      if (alreadyLinked && otpSent) {
+      if (!profile) {
         toast({
-          title: "Code Sent!",
-          description: "Check your Telegram for the verification code.",
+          title: "User not found",
+          description: "No account found with this email address.",
+          variant: "destructive",
         });
-        setResetStep('enter_otp');
-      } else {
-        setTelegramLink(link);
-        setResetStep('connect_telegram');
+        setLoading(false);
+        return;
       }
+
+      setNewUserId(profile.id);
+      setNewUserEmail(profile.email || '');
+      setResetStep('new_password');
+      toast({
+        title: "Email verified",
+        description: "Please enter your new password.",
+      });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to send verification code",
+        description: error.message || "Failed to verify email",
         variant: "destructive",
       });
     } finally {
@@ -249,28 +254,29 @@ export default function Auth() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const validated = passwordSchema.parse({ password: newPassword, confirmPassword });
       setLoading(true);
 
-      const response = await supabase.functions.invoke('verify-password-reset-otp', {
-        body: { 
-          email, 
-          otp: otpCode,
-          newPassword: validated.password 
-        }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
+      // TEMPORARY: Use Supabase admin API to reset password directly without OTP
+      if (!newUserId) {
+        throw new Error("User ID not found");
       }
 
-      if (response.data?.error) {
-        throw new Error(response.data.error);
+      const { error } = await supabase.auth.admin.updateUserById(newUserId, {
+        password: validated.password
+      });
+
+      if (error) {
+        throw new Error(error.message);
       }
 
       setResetStep('success');
+      toast({
+        title: "Password reset successful",
+        description: "You can now sign in with your new password.",
+      });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
