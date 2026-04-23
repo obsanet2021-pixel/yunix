@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Target, Users, Shield, ArrowLeft } from "lucide-react";
+import { Target, Users, Shield, ArrowLeft, UserCircle } from "lucide-react";
 import YunixLogo from "@/components/YunixLogo";
 
 export default function About() {
@@ -83,6 +83,54 @@ export default function About() {
               </CardContent>
             </Card>
           </div>
+
+          <section className="mt-16">
+            <h2 className="text-2xl font-semibold mb-6">Company & Team</h2>
+            <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                      <UserCircle className="h-10 w-10 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground uppercase tracking-[0.2em]">
+                        Core leadership
+                      </p>
+                      <h3 className="text-xl font-semibold">YUNIX Executive Team</h3>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="rounded-2xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm text-muted-foreground">CEO</p>
+                    <p className="mt-2 font-semibold">Chief Executive Officer</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm text-muted-foreground">COO</p>
+                    <p className="mt-2 font-semibold">Chief Operations Officer</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm text-muted-foreground">CFO</p>
+                    <p className="mt-2 font-semibold">Chief Financial Officer</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm text-muted-foreground">Engineering</p>
+                    <p className="mt-2 font-semibold">Development & Platform Team</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm text-muted-foreground">Product</p>
+                    <p className="mt-2 font-semibold">Product & Design Leadership</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/50 bg-background/80 p-4">
+                    <p className="text-sm text-muted-foreground">Support</p>
+                    <p className="mt-2 font-semibold">Customer Success & Growth</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </main>
     </div>
