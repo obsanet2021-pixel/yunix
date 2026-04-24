@@ -231,7 +231,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12 mb-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
@@ -244,33 +244,33 @@ export default function Landing() {
                 Your professional trading platform.
               </p>
               <div className="flex items-center gap-3">
-                <a 
-                  href="https://www.youtube.com/@yunixgroup?sub_confirmation=1" 
-                  target="_blank" 
+                <a
+                  href="https://www.youtube.com/@yunixgroup?sub_confirmation=1"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
                 >
                   <Youtube className="h-4 w-4" />
                 </a>
-                <a 
-                  href="https://t.me/OfficialYunix" 
-                  target="_blank" 
+                <a
+                  href="https://t.me/OfficialYunix"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
                 >
                   <Send className="h-4 w-4" />
                 </a>
-                <a 
-                  href="https://www.instagram.com/yunixofficial1?igsh=N2wzamd2OTF0aDll" 
-                  target="_blank" 
+                <a
+                  href="https://www.instagram.com/yunixofficial1?igsh=N2wzamd2OTF0aDll"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
                 >
                   <Instagram className="h-4 w-4" />
                 </a>
-                <a 
-                  href="https://www.tiktok.com/@yunixofficial?_r=1&_t=ZS-92P31kwqlQD" 
-                  target="_blank" 
+                <a
+                  href="https://www.tiktok.com/@yunixofficial?_r=1&_t=ZS-92P31kwqlQD"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
                 >
@@ -286,7 +286,7 @@ export default function Landing() {
                 <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link></li>
                 <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Trade Journal</Link></li>
                 <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Analytics</Link></li>
-                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Courses</Link></li>
+                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Backtesting</Link></li>
               </ul>
             </div>
 
@@ -298,6 +298,17 @@ export default function Landing() {
                 <li><Link to="/careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Careers</Link></li>
                 <li><Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Blog</Link></li>
                 <li><Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link></li>
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h4 className="font-semibold mb-4">Resources</h4>
+              <ul className="space-y-3">
+                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Documentation</Link></li>
+                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Tutorials</Link></li>
+                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">API Reference</Link></li>
+                <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Community</Link></li>
               </ul>
             </div>
 
