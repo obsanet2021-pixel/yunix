@@ -952,9 +952,6 @@ export default function CourseManagerDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {certificates.map(cert => (
                     <Card key={cert.id} className="overflow-hidden group hover:shadow-lg transition-shadow">
-                        </div>
-                      </div>
-                      
                       <CardContent className="p-4 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="font-medium truncate flex-1">{cert.user_name || 'Unknown'}</span>
