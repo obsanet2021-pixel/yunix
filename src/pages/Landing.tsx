@@ -117,55 +117,35 @@ export default function Landing() {
       <section className="pt-32 lg:pt-40 pb-20 lg:pb-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto animate-fade-up">
-            <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm font-medium">
-              Trusted by 10,000+ Traders
-            </Badge>
-            
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-6">
-              Master Your Trading{" "}
-              <span className="gradient-text">Journey</span>
+              Success in Trading{" "}
+              <span className="gradient-text">Begins Today</span>
             </h1>
             
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              Professional trading platform with advanced backtesting, AI-powered insights, 
-              and comprehensive analytics to help you achieve consistent profitability.
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
+              Join hundreds of disciplined traders who trust YUNIX to track, analyze, and master their trading journey with AI-powered insights.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Button 
                 size="lg" 
                 onClick={() => navigate("/auth")} 
-                className="w-full sm:w-auto px-8 h-12 text-base font-semibold shadow-lg"
+                className="w-full sm:w-auto px-8 h-12 text-base font-semibold shadow-lg btn-gradient"
               >
                 Get Started Free
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                onClick={() => navigate("/auth")}
-                className="w-full sm:w-auto px-8 h-12 text-base font-semibold"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                View Demo
-              </Button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-xl mx-auto">
-              {stats.map((stat, index) => (
-                <div 
-                  key={index} 
-                  className="text-center p-4 rounded-2xl bg-card border border-border hover-lift"
-                >
-                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
-                    {stat.value}
-                  </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground font-medium">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+            {/* Product Screenshot */}
+            <div className="relative max-w-5xl mx-auto">
+              <div className="glow-card rounded-2xl overflow-hidden shadow-2xl">
+                <img 
+                  src="/hero-screenshot-1.png" 
+                  alt="YUNIX Trading Platform Dashboard"
+                  className="w-full h-auto"
+                />
+              </div>
             </div>
           </div>
         </div>
