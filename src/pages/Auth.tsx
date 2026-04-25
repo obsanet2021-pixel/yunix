@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,9 +168,9 @@ export default function Auth() {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, authUser]);
+  }, [navigate, authUser, handlePostAuthRedirect]);
 
-  const handlePostAuthRedirect = async (userId: string, userEmail: string) => {
+  const handlePostAuthRedirect = useCallback(async (userId: string, userEmail: string) => {
     // Check if user has staff role via new system
     const { data: isStaff } = await supabase.rpc('has_role', {
       _user_id: userId,
@@ -191,7 +191,7 @@ export default function Auth() {
     } else {
       navigate("/app/dashboard", { replace: true });
     }
-  };
+  }, [navigate]);
 
   // STEP 1: Send verification code - check if user has Telegram linked
   const handleSendVerificationCode = async (e: React.FormEvent) => {
@@ -289,10 +289,11 @@ export default function Auth() {
         description: "Now set your new password.",
       });
       setResetStep('new_password');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Invalid or expired OTP code";
       toast({
         title: "Verification failed",
-        description: error.message || "Invalid or expired OTP code",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -329,7 +330,7 @@ export default function Auth() {
         description: "Your password has been successfully reset.",
       });
       setResetStep('success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
@@ -337,9 +338,10 @@ export default function Auth() {
           variant: "destructive",
         });
       } else {
+        const message = error instanceof Error ? error.message : "Failed to reset password";
         toast({
           title: "Error",
-          description: error.message || "Failed to reset password",
+          description: message,
           variant: "destructive",
         });
       }
@@ -363,10 +365,11 @@ export default function Auth() {
         title: "Code Resent!",
         description: "Check your email for the new reset code.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to resend code";
       toast({
         title: "Error",
-        description: error.message || "Failed to resend code",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -523,10 +526,11 @@ export default function Auth() {
           variant: "destructive",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to sign in with Google";
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in with Google",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -571,10 +575,11 @@ export default function Auth() {
           description: "Click START in the bot to link your account, then continue.",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to generate Telegram link";
       toast({
         title: "Error",
-        description: error.message || "Failed to generate Telegram link",
+        description: message,
         variant: "destructive",
       });
     } finally {
