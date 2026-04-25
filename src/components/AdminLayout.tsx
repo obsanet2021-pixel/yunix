@@ -139,8 +139,12 @@ export default function AdminLayout() {
   const { isStaff, isAdmin } = useStaffPermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('adminSidebarCollapsed');
-    return saved === 'true';
+    try {
+      const saved = localStorage.getItem('adminSidebarCollapsed');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
   });
   const [loading, setLoading] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -151,7 +155,11 @@ export default function AdminLayout() {
   const toggleSidebarCollapse = () => {
     const newValue = !sidebarCollapsed;
     setSidebarCollapsed(newValue);
-    localStorage.setItem('adminSidebarCollapsed', String(newValue));
+    try {
+      localStorage.setItem('adminSidebarCollapsed', String(newValue));
+    } catch (error) {
+      console.error('Failed to save sidebar state:', error);
+    }
   };
 
   // Check maintenance mode status

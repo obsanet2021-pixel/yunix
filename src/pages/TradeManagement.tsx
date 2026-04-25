@@ -129,7 +129,6 @@ export default function TradeManagement() {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('New trade received:', payload);
           setTrades(prev => [payload.new as Trade, ...prev]);
           toast({
             title: "New Trade Synced",

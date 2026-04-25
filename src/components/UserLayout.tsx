@@ -76,8 +76,12 @@ export default function UserLayout() {
   const { isStaff } = useStaffPermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('userSidebarCollapsed');
-    return saved === 'true';
+    try {
+      const saved = localStorage.getItem('userSidebarCollapsed');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
   });
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
@@ -99,7 +103,11 @@ export default function UserLayout() {
   const toggleSidebarCollapse = () => {
     const newValue = !sidebarCollapsed;
     setSidebarCollapsed(newValue);
-    localStorage.setItem('userSidebarCollapsed', String(newValue));
+    try {
+      localStorage.setItem('userSidebarCollapsed', String(newValue));
+    } catch (error) {
+      console.error('Failed to save sidebar state:', error);
+    }
   };
 
   // Auto-collapse sidebar when navigating to AI Chat

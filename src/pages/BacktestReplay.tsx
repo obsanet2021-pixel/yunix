@@ -50,16 +50,23 @@ export default function BacktestReplay() {
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
-    const sessions = JSON.parse(localStorage.getItem("backtest-sessions") || "[]");
-    const found = sessions.find((s: any) => s.id === sessionId);
-    if (!found) {
-      toast.error("Session not found");
+    try {
+      const saved = localStorage.getItem("backtest-sessions");
+      const sessions = saved ? JSON.parse(saved) : [];
+      const found = sessions.find((s: any) => s.id === sessionId);
+      if (!found) {
+        toast.error("Session not found");
+        navigate("/backtest-sessions");
+        return;
+      }
+      setSession(found);
+      setBalance(found.balance);
+      generateHistoricalData(found);
+    } catch (error) {
+      console.error('Error loading session:', error);
+      toast.error("Failed to load session");
       navigate("/backtest-sessions");
-      return;
     }
-    setSession(found);
-    setBalance(found.balance);
-    generateHistoricalData(found);
   }, [sessionId]);
 
   const generateHistoricalData = (sess: any) => {

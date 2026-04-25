@@ -34,7 +34,15 @@ serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get challenge
     const { data: challenge } = await supabase
@@ -76,18 +84,19 @@ serve(async (req: Request) => {
     // Secure comparison
     const isValid = secureCompare(hashedInput, challenge.code_hash);
 
-    // Update attempts
-    await supabase
-      .from('auth_challenges')
-      .update({
-        attempt_count: (challenge.attempt_count || 0) + 1,
-        locked_until: (challenge.attempt_count || 0) + 1 >= 5
-          ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
-          : null
-      })
-      .eq('id', challengeId);
-
     if (!isValid) {
+      // Update attempts only on failed verification
+      const newAttemptCount = (challenge.attempt_count || 0) + 1;
+      await supabase
+        .from('auth_challenges')
+        .update({
+          attempt_count: newAttemptCount,
+          locked_until: newAttemptCount >= 5
+            ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
+            : null
+        })
+        .eq('id', challengeId);
+
       return new Response(
         JSON.stringify({ error: 'Invalid verification code' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -95,21 +104,34 @@ serve(async (req: Request) => {
     }
 
     // Get user email
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('email')
       .eq('id', challenge.user_id)
       .single();
 
+    if (profileError || !userProfile) {
+      return new Response(
+        JSON.stringify({ error: 'User profile not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Generate recovery token
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email: userProfile!.email
+      email: userProfile.email
     });
 
-    if (resetError) throw resetError;
+    if (resetError) {
+      console.error('Error generating recovery link:', resetError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate recovery token' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Delete used challenge
+    // Delete used challenge only after successful token generation
     await supabase.from('auth_challenges').delete().eq('id', challengeId);
 
     return new Response(

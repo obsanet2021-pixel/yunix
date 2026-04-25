@@ -31,9 +31,14 @@ export default function BacktestSessions() {
 
   useEffect(() => {
     // Load sessions from localStorage
-    const saved = localStorage.getItem("backtest-sessions");
-    if (saved) {
-      setSessions(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem("backtest-sessions");
+      if (saved) {
+        setSessions(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+      setSessions([]);
     }
   }, []);
 
@@ -54,7 +59,11 @@ export default function BacktestSessions() {
 
     const updated = [...sessions, session];
     setSessions(updated);
-    localStorage.setItem("backtest-sessions", JSON.stringify(updated));
+    try {
+      localStorage.setItem("backtest-sessions", JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to save sessions:', error);
+    }
     
     setIsDialogOpen(false);
     setNewSession({ name: "", pair: "XAUUSD", balance: "10000", timeframe: "15m" });
@@ -64,7 +73,11 @@ export default function BacktestSessions() {
   const deleteSession = (id: string) => {
     const updated = sessions.filter((s) => s.id !== id);
     setSessions(updated);
-    localStorage.setItem("backtest-sessions", JSON.stringify(updated));
+    try {
+      localStorage.setItem("backtest-sessions", JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to save sessions:', error);
+    }
     toast.success("Session deleted");
   };
 

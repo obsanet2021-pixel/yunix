@@ -70,7 +70,6 @@ export function useRealtimeTrades(userId: string | null) {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('New trade received:', payload);
           setTrades(prev => [payload.new as Trade, ...prev]);
         }
       )
@@ -83,7 +82,6 @@ export function useRealtimeTrades(userId: string | null) {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('Trade updated:', payload);
           setTrades(prev => 
             prev.map(trade => 
               trade.id === payload.new.id ? payload.new as Trade : trade
@@ -100,7 +98,6 @@ export function useRealtimeTrades(userId: string | null) {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('Trade deleted:', payload);
           setTrades(prev => prev.filter(trade => trade.id !== payload.old.id));
         }
       )

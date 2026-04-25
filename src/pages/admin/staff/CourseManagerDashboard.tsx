@@ -952,26 +952,6 @@ export default function CourseManagerDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {certificates.map(cert => (
                     <Card key={cert.id} className="overflow-hidden group hover:shadow-lg transition-shadow">
-                      {/* Certificate Image Thumbnail */}
-                      <div 
-                        className="aspect-[4/3] bg-muted relative cursor-pointer overflow-hidden"
-                        onClick={() => openViewCertificate(cert)}
-                      >
-                        <img 
-                          src={cert.certificate_url} 
-                          alt={`Certificate for ${cert.user_name}`}
-                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-muted"><svg class="h-12 w-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>';
-                          }}
-                        />
-                        {/* Overlay on hover */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <Button size="sm" variant="secondary" className="gap-1">
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
                         </div>
                       </div>
                       

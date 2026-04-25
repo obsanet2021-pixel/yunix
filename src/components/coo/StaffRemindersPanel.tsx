@@ -176,7 +176,6 @@ export function StaffRemindersPanel() {
           toast.info(`${notificationResult.staff_name} is not linked to Telegram - no notification sent`);
         } else {
           toast.success('Reminder created successfully');
-          console.log('Notification not sent:', notificationResult);
         }
       } catch (notifyError) {
         console.error('Failed to send notification:', notifyError);

@@ -281,7 +281,11 @@ export default function Auth() {
       // Store the recovery token for password reset
       const recoveryToken = response.data.recoveryToken;
       if (recoveryToken) {
-        localStorage.setItem('reset_recovery_token', recoveryToken);
+        try {
+          localStorage.setItem('reset_recovery_token', recoveryToken);
+        } catch (error) {
+          console.error('Failed to store recovery token:', error);
+        }
       }
 
       toast({
@@ -303,14 +307,18 @@ export default function Auth() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       const validated = passwordSchema.parse({ password: newPassword, confirmPassword });
       setLoading(true);
 
-      const recoveryToken = localStorage.getItem('reset_recovery_token');
-      if (!recoveryToken) {
-        throw new Error('Session expired. Please restart the password reset process.');
+      try {
+        const recoveryToken = localStorage.getItem('reset_recovery_token');
+        if (!recoveryToken) {
+          throw new Error('Session expired. Please restart the password reset process.');
+        }
+      } catch (error) {
+        console.error('Error getting recovery token from local storage:', error);
+        throw new Error('Failed to retrieve recovery token');
       }
 
       // Use the recovery token to update password via Supabase Auth
@@ -323,7 +331,11 @@ export default function Auth() {
       }
 
       // Clean up
-      localStorage.removeItem('reset_recovery_token');
+      try {
+        localStorage.removeItem('reset_recovery_token');
+      } catch (error) {
+        console.error('Failed to remove recovery token:', error);
+      }
 
       toast({
         title: "Password Updated!",

@@ -27,18 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check for existing custom session
     const checkCustomSession = async () => {
-      const storedToken = localStorage.getItem('custom_session_token');
-      if (storedToken) {
-        const validSession = await validateSessionToken(storedToken);
-        if (validSession && new Date(validSession.expires_at) > new Date() && !validSession.revoked) {
-          setCustomSession(validSession);
+      try {
+        const storedToken = localStorage.getItem('custom_session_token');
+        if (storedToken) {
+          const validSession = await validateSessionToken(storedToken);
+          if (validSession && new Date(validSession.expires_at) > new Date() && !validSession.revoked) {
+            setCustomSession(validSession);
 
-          // Get user from Supabase auth
-          const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-          setUser(supabaseUser);
-        } else {
-          localStorage.removeItem('custom_session_token');
+            // Get user from Supabase auth
+            const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+            setUser(supabaseUser);
+          } else {
+            localStorage.removeItem('custom_session_token');
+          }
         }
+      } catch (error) {
+        console.error('Error checking custom session:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -112,7 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    localStorage.removeItem('custom_session_token');
+    try {
+      localStorage.removeItem('custom_session_token');
+    } catch (error) {
+      console.error('Failed to remove session token:', error);
+    }
     setCustomSession(null);
     await supabase.auth.signOut();
   };
@@ -154,7 +164,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       try {
         await revokeAllUserSessions(user.id);
-        localStorage.removeItem('custom_session_token');
+        try {
+          localStorage.removeItem('custom_session_token');
+        } catch (error) {
+          console.error('Failed to remove session token:', error);
+        }
         setCustomSession(null);
       } catch (sessionError) {
         console.error('Failed to revoke sessions on password change:', sessionError);
@@ -174,9 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'Support Specialist': '/app/admin/staff/support',
       'QA Tester': '/app/admin/staff/qa',
       'Data Analyst': '/app/admin/staff/analytics',
-      'Data Analyts': '/app/admin/staff/analytics',
       'Plaque Order Manager': '/app/admin/staff/plaque-orders',
-      'order Manager': '/app/admin/staff/plaque-orders',
+      'Order Manager': '/app/admin/staff/plaque-orders',
       'Social Media Manager': '/app/admin/staff/marketing',
       'Marketing': '/app/admin/staff/marketing',
     };

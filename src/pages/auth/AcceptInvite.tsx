@@ -38,8 +38,6 @@ export default function AcceptInvite() {
       const refreshToken = hashParams.get('refresh_token');
       const type = hashParams.get('type');
 
-      console.log('Invite callback - type:', type, 'hasAccessToken:', !!accessToken);
-
       if (accessToken && refreshToken && type === 'invite') {
         // Set the session from the invite link
         const { data, error } = await supabase.auth.setSession({

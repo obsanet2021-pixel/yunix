@@ -60,7 +60,14 @@ export default function Welcome() {
           totalTrades: trades.length,
           winRate,
           bestReturn,
-          backtestCount: JSON.parse(localStorage.getItem("backtest-sessions") || "[]").length
+          backtestCount: (() => {
+            try {
+              const saved = localStorage.getItem("backtest-sessions");
+              return saved ? JSON.parse(saved).length : 0;
+            } catch {
+              return 0;
+            }
+          })()
         });
       }
     } catch (error) {
