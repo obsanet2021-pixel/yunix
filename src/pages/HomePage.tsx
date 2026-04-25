@@ -168,23 +168,100 @@ export default function HomePage() {
       {/* Footer */}
       <footer id="contact" className="border-t border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12 mb-12">
+            {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <div className="mb-4"><YunixLogo /></div>
-              <p className="text-sm text-muted-foreground mb-4">Your professional trading platform for analysis, education, and growth.</p>
+              <div className="flex items-center gap-2 mb-4">
+                <YunixLogo />
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Your professional trading platform.
+              </p>
               <div className="flex items-center gap-3">
-                <a href="https://www.youtube.com/@yunixgroup?sub_confirmation=1" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"><Youtube className="h-4 w-4" /></a>
-                <a href="https://t.me/OfficialYunix" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"><Send className="h-4 w-4" /></a>
-                <a href="https://www.instagram.com/yunixofficial1" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"><Instagram className="h-4 w-4" /></a>
-                <a href="https://www.tiktok.com/@yunixofficial" target="_blank" rel="noopener noreferrer" className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"><TikTokIcon className="h-4 w-4" /></a>
+                <a
+                  href="https://www.youtube.com/@yunixgroup?sub_confirmation=1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                >
+                  <Youtube className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://t.me/OfficialYunix"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                >
+                  <Send className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://www.instagram.com/yunixofficial1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                >
+                  <Instagram className="h-4 w-4" />
+                </a>
+                <a
+                  href="https://www.tiktok.com/@yunixofficial"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                >
+                  <TikTokIcon className="h-4 w-4" />
+                </a>
               </div>
             </div>
-            <div><h4 className="font-semibold mb-4">Platform</h4><ul className="space-y-3"><li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a></li><li><a href="#courses" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Courses</a></li></ul></div>
-            <div><h4 className="font-semibold mb-4">Company</h4><ul className="space-y-3"><li><a href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</a></li><li><a href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</a></li></ul></div>
-            <div><h4 className="font-semibold mb-4">Legal</h4><ul className="space-y-3"><li><a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</a></li><li><a href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</a></li></ul></div>
+
+            {/* Product */}
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a></li>
+                <li><a href="#courses" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Courses</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Trade Journal</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Analytics</a></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><a href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About Us</a></li>
+                <li><a href="/careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Careers</a></li>
+                <li><a href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Blog</a></li>
+                <li><a href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h4 className="font-semibold mb-4">Resources</h4>
+              <ul className="space-y-3">
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Documentation</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Tutorials</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">API Reference</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Community</a></li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li><a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</a></li>
+                <li><a href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</a></li>
+                <li><a href="/cookies" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cookie Policy</a></li>
+              </ul>
+            </div>
           </div>
+
+          {/* Copyright */}
           <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">© 2026 YUNIX. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">
+              © 2026 YUNIX. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>

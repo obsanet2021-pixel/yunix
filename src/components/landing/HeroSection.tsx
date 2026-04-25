@@ -112,15 +112,16 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
           </ScrollReveal>
         </div>
 
-        {/* Hero Visual with 2.5D effect */}
+        {/* Product Screenshot */}
         <ScrollReveal direction="up" delay={500} className="mt-16 lg:mt-24">
-          <div className="relative perspective-1000">
-            <FloatingElement intensity={5} rotateIntensity={2} floatAnimation={false}>
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10 pointer-events-none" />
-              <div className="rounded-2xl lg:rounded-3xl border border-border bg-card overflow-hidden shadow-2xl transform-gpu hover:scale-[1.02] transition-transform duration-500">
-                <PlatformPreviewSlideshow />
-              </div>
-            </FloatingElement>
+          <div className="relative max-w-5xl mx-auto">
+            <div className="glow-card rounded-2xl overflow-hidden shadow-2xl">
+              <img 
+                src="/hero-screenshot-1.png" 
+                alt="YUNIX Trading Platform Dashboard"
+                className="w-full h-auto"
+              />
+            </div>
           </div>
         </ScrollReveal>
 
