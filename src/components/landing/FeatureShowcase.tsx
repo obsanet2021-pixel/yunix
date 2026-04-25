@@ -1,89 +1,92 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BarChart3, BookOpen, Target, Brain, TrendingUp, GraduationCap } from 'lucide-react';
+import { BarChart3, BookOpen, Target, Brain, TrendingUp, GraduationCap, ArrowRight } from 'lucide-react';
 import ScrollReveal from './ScrollReveal';
-import { useTiltEffect } from '@/hooks/useTilt';
 
 const features = [
   {
-    icon: BarChart3,
-    title: "Advanced Analytics",
-    description: "Track your performance with real-time insights and comprehensive metrics to optimize your strategy."
+    icon: '📊',
+    title: "Advanced Analytics Engine",
+    description: "Deep-dive into your statistics — win rate by session, P&L by pair, performance by day-of-week. Know exactly when and why you win.",
+    tag: "→ Real-time data",
+    color: 'accent'
   },
   {
-    icon: BookOpen,
-    title: "Trade Journal",
-    description: "Document every trade with notes, emotions, and screenshots for continuous improvement."
-  },
-  {
-    icon: Target,
+    icon: '🔁',
     title: "Smart Backtesting",
-    description: "Test strategies with historical data and replay functionality for risk-free practice."
+    description: "Replay historical price action against your actual strategy rules. Find edge before risking real capital. Includes automatic playback and annotation.",
+    tag: "→ Strategy validation",
+    color: 'blue'
   },
   {
-    icon: Brain,
-    title: "AI Trading Assistant",
-    description: "Get personalized advice powered by AI trained on market analysis and your data."
+    icon: '📓',
+    title: "Trade Journal + Screenshots",
+    description: "Log every trade with notes, emotional state, market conditions and chart screenshots. Build the evidence base that separates pros from gamblers.",
+    tag: "→ Pattern memory",
+    color: 'green'
   },
   {
-    icon: TrendingUp,
-    title: "Account Tracking",
-    description: "Monitor multiple accounts and track progress toward your funding goals."
-  },
-  {
-    icon: GraduationCap,
-    title: "Expert Courses",
-    description: "Access premium educational content to accelerate your trading education."
+    icon: '🎯',
+    title: "Account & Challenge Tracker",
+    description: "Monitor daily loss limits, drawdown thresholds and challenge targets across multiple prop accounts. Never blow a funded account again.",
+    tag: "→ Risk management",
+    color: 'gold'
   }
 ];
 
-function TiltCard({ feature, index }: { feature: typeof features[0]; index: number }) {
-  const { getTiltStyle, tiltHandlers, isHovered } = useTiltEffect();
-  
+function FeatureCard({ feature, index, isWide = false }: { feature: typeof features[0]; index: number; isWide?: boolean }) {
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setMousePos({ x, y });
+  };
+
+  const colorClasses = {
+    accent: 'bg-primary/10 border-primary/20 text-primary',
+    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-500',
+    green: 'bg-green-500/10 border-green-500/20 text-green-500',
+    gold: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'
+  };
+
+  const tagColorClasses = {
+    accent: 'text-primary',
+    blue: 'text-blue-500',
+    green: 'text-green-500',
+    gold: 'text-yellow-500'
+  };
+
   return (
-    <ScrollReveal 
-      direction="up" 
-      delay={index * 100}
-      threshold={0.1}
-    >
+    <ScrollReveal direction="up" delay={index * 100} threshold={0.1}>
       <Card 
-        className="group relative overflow-hidden bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-colors duration-300 h-full cursor-pointer"
-        style={getTiltStyle()}
-        {...tiltHandlers}
+        className={`group relative overflow-hidden bg-card border-border hover:border-border/80 transition-all duration-300 cursor-pointer ${isWide ? 'col-span-2' : ''}`}
+        onMouseMove={handleMouseMove}
+        style={{
+          '--mx': `${mousePos.x}%`,
+          '--my': `${mousePos.y}%`
+        } as React.CSSProperties}
       >
-        {/* Hover gradient overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
-        
-        {/* Shine effect on hover */}
+        {/* Mouse-tracking glow effect */}
         <div 
-          className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 ${isHovered ? 'translate-x-full' : '-translate-x-full'}`}
-          style={{ transform: isHovered ? 'translateX(100%)' : 'translateX(-100%)' }}
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at var(--mx) var(--my), hsl(var(--primary) / 0.08) 0%, transparent 50%)`
+          }}
         />
         
-        {/* 3D content layer */}
-        <CardContent 
-          className="relative p-6 lg:p-8"
-          style={{ transform: isHovered ? 'translateZ(30px)' : 'translateZ(0)', transition: 'transform 0.3s ease' }}
-        >
-          <div 
-            className={`h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5 transition-all duration-300 ${isHovered ? 'bg-primary/20 scale-110' : ''}`}
-            style={{ transform: isHovered ? 'translateZ(40px)' : 'translateZ(0)' }}
-          >
-            <feature.icon className="h-6 w-6 text-primary" />
+        <CardContent className="relative p-8 lg:p-10">
+          <div className={`h-12 w-12 rounded-xl flex items-center justify-center mb-6 text-2xl ${colorClasses[feature.color]}`}>
+            {feature.icon}
           </div>
-          <h3 
-            className="text-xl font-semibold mb-3"
-            style={{ transform: isHovered ? 'translateZ(20px)' : 'translateZ(0)' }}
-          >
-            {feature.title}
-          </h3>
-          <p 
-            className="text-muted-foreground leading-relaxed"
-            style={{ transform: isHovered ? 'translateZ(10px)' : 'translateZ(0)' }}
-          >
-            {feature.description}
-          </p>
+          <h3 className="font-display text-xl font-bold mb-3">{feature.title}</h3>
+          <p className="text-muted-foreground leading-relaxed mb-6">{feature.description}</p>
+          <span className={`inline-flex items-center gap-2 text-sm font-mono ${tagColorClasses[feature.color]}`}>
+            {feature.tag}
+            <ArrowRight className="h-3 w-3" />
+          </span>
         </CardContent>
       </Card>
     </ScrollReveal>
@@ -92,24 +95,69 @@ function TiltCard({ feature, index }: { feature: typeof features[0]; index: numb
 
 export default function FeatureShowcase() {
   return (
-    <section id="features" className="scroll-snap-section py-20 lg:py-32 px-4 sm:px-6 lg:px-8 bg-muted/30">
+    <section id="features" className="py-24 lg:py-32 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <ScrollReveal direction="up">
           <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Features</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
-              Everything You Need to <span className="gradient-text">Succeed</span>
+            <Badge variant="secondary" className="mb-5 px-4 py-1.5 text-xs font-medium tracking-wider uppercase">Platform</Badge>
+            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4">
+              Built for serious<br />traders. Period.
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Powerful tools designed for serious traders who want to take their performance to the next level.
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto font-light">
+              Every feature exists for one reason — to make you more profitable and disciplined.
             </p>
           </div>
         </ScrollReveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid sm:grid-cols-2 gap-6">
           {features.map((feature, index) => (
-            <TiltCard key={index} feature={feature} index={index} />
+            <FeatureCard key={index} feature={feature} index={index} />
           ))}
+          
+          {/* Wide AI Card */}
+          <ScrollReveal direction="up" delay={400} threshold={0.1}>
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-border/80 transition-all duration-300 cursor-pointer col-span-2">
+              <CardContent className="relative p-8 lg:p-10 grid md:grid-cols-2 gap-10 items-center">
+                <div>
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-6 text-2xl text-primary">
+                    🤖
+                  </div>
+                  <h3 className="font-display text-xl font-bold mb-3">AI Trading Assistant</h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    Your personal mentor, available 24/7. Ask about your trading patterns, get pre-session briefings, post-trade debriefs and actionable coaching — all powered by your own data.
+                  </p>
+                  <span className="inline-flex items-center gap-2 text-sm font-mono text-primary">
+                    → Personalized to your journal
+                    <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+                
+                {/* AI Chat Visual */}
+                <div className="bg-card/50 border border-border rounded-xl p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground font-mono mb-2">YUNIX AI</div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-sm">
+                        Looking at your April data — you're 40% less profitable on Fridays. Your avg loss nearly doubles during London close. Want me to flag future Friday trades?
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-muted-foreground font-mono mb-2">You</div>
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-sm inline-block text-left">
+                        Yes, and what's my best session historically?
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground font-mono mb-2">YUNIX AI</div>
+                      <div className="bg-card border border-border rounded-lg p-3 text-sm">
+                        London open — 8–10 AM GMT. 71% win rate, avg R:R of 2.3. Your edge is clearest on EURUSD and GBP pairs during that window.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </ScrollReveal>
         </div>
       </div>
     </section>

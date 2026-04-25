@@ -2,11 +2,11 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronRight, Play, ChevronDown } from 'lucide-react';
+import { ChevronRight, Play, ChevronDown, ArrowRight } from 'lucide-react';
 import FloatingElement from './FloatingElement';
 import ScrollReveal from './ScrollReveal';
 import AnimatedCounter from './AnimatedCounter';
-import PlatformPreviewSlideshow from '@/components/PlatformPreviewSlideshow';
+import DashboardMockup from './DashboardMockup';
 import { cn } from '@/lib/utils';
 
 interface HeroSectionProps {
@@ -17,66 +17,49 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
   const navigate = useNavigate();
 
   return (
-    <section className="relative min-h-screen pt-32 lg:pt-40 pb-20 lg:pb-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Background Elements - Parallax Orbs */}
+    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 lg:pt-32 pb-20 lg:pb-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      {/* Background Elements - Glow Orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Primary gradient orb */}
+        {/* Primary orange orb */}
         <div 
-          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl animate-pulse"
-          style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)' }}
+          className="absolute -top-[100px] -right-[100px] w-[600px] h-[600px] rounded-full blur-[80px]"
+          style={{ background: 'radial-gradient(circle, rgba(250,140,56,0.12) 0%, transparent 70%)' }}
         />
-        {/* Secondary gradient orb */}
+        {/* Secondary blue orb */}
         <div 
-          className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl"
-          style={{ 
-            background: 'radial-gradient(circle, hsl(217 91% 60% / 0.3) 0%, transparent 70%)',
-            animation: 'pulse 4s ease-in-out infinite 1s'
-          }}
+          className="absolute -bottom-[50px] -left-[100px] w-[500px] h-[500px] rounded-full blur-[80px]"
+          style={{ background: 'radial-gradient(circle, rgba(74,158,255,0.08) 0%, transparent 70%)' }}
         />
-        {/* Floating geometric shapes */}
-        <FloatingElement intensity={10} className="absolute top-1/4 left-[10%]">
-          <div className="w-20 h-20 border border-primary/20 rounded-2xl rotate-12 backdrop-blur-sm" />
-        </FloatingElement>
-        <FloatingElement intensity={15} className="absolute top-1/3 right-[15%]">
-          <div className="w-16 h-16 border border-accent/30 rounded-full backdrop-blur-sm" />
-        </FloatingElement>
-        <FloatingElement intensity={8} className="absolute bottom-1/3 left-[20%]">
-          <div className="w-12 h-12 bg-primary/5 rounded-lg rotate-45 backdrop-blur-sm" />
-        </FloatingElement>
+        {/* Tertiary green orb */}
+        <div 
+          className="absolute top-1/2 left-[40%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full blur-[80px]"
+          style={{ background: 'radial-gradient(circle, rgba(34,211,160,0.06) 0%, transparent 70%)' }}
+        />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10 w-full">
         {/* Main Content */}
         <div className="text-center max-w-4xl mx-auto">
           <ScrollReveal direction="fade" delay={0}>
-            <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm font-medium backdrop-blur-sm">
-              Trusted by <AnimatedCounter target={userCount} suffix="+" duration={1500} /> Traders
-            </Badge>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-medium text-primary uppercase tracking-wider">
+                Live — <AnimatedCounter target={userCount} suffix="+" duration={1500} /> Funded Traders
+              </span>
+            </div>
           </ScrollReveal>
           
           <ScrollReveal direction="up" delay={100}>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
-              Success in Trading{" "}
-              <span className="gradient-text relative">
-                Begins Today
-                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
-                  <path 
-                    d="M2 10C50 4 100 2 150 6C200 10 250 4 298 8" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth="3" 
-                    strokeLinecap="round"
-                    className="animate-draw"
-                    style={{ strokeDasharray: 300, strokeDashoffset: 0 }}
-                  />
-                </svg>
-              </span>
+            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[1.05]">
+              The Journal That<br />
+              <span className="gradient-text">Funded Traders</span><br />
+              <span className="text-muted-foreground">Actually Use</span>
             </h1>
           </ScrollReveal>
           
           <ScrollReveal direction="up" delay={200}>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Join hundreds of disciplined traders who trust YUNIX to track, analyze, and master 
-              their trading journey with AI-powered insights.
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light">
+              Track every trade. Decode every pattern. Let AI reveal what's holding you back — before the market does.
             </p>
           </ScrollReveal>
 
@@ -85,16 +68,16 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
               <Button 
                 size="lg" 
                 onClick={() => navigate("/auth")} 
-                className="group w-full sm:w-auto px-8 h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                className="group w-full sm:w-auto px-8 h-14 text-base font-semibold bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all duration-300 hover:-translate-y-0.5 rounded-xl"
               >
-                Get Started Free
-                <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                Start for Free
+                <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
                 onClick={() => navigate("/auth")} 
-                className="group w-full sm:w-auto px-8 h-12 text-base font-semibold hover:bg-primary/5 transition-all duration-300"
+                className="group w-full sm:w-auto px-8 h-14 text-base font-semibold bg-card border-border hover:bg-card/80 transition-all duration-300 rounded-xl"
               >
                 <Play className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                 Watch Demo
@@ -102,40 +85,24 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
             </div>
           </ScrollReveal>
 
-          {/* Animated Stats */}
+          {/* Stats Bar */}
           <ScrollReveal direction="scale" delay={400}>
-            <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-xl mx-auto">
-              <StatCard value={userCount} suffix="+" label="Active Traders" delay={0} />
-              <StatCard value={95} suffix="%" label="Success Rate" delay={100} />
-              <StatCard value={50} suffix="+" label="Expert Courses" delay={200} />
+            <div className="inline-flex items-center bg-card border border-border rounded-2xl overflow-hidden">
+              <StatBar value={userCount} suffix="+" label="Active Traders" />
+              <div className="w-px h-12 bg-border" />
+              <StatBar value={10000} suffix="+" label="Trades Logged" />
+              <div className="w-px h-12 bg-border" />
+              <StatBar value={95} suffix="%" label="Satisfaction" />
+              <div className="w-px h-12 bg-border" />
+              <StatBar value={50} suffix="+" label="Expert Courses" />
             </div>
           </ScrollReveal>
         </div>
 
-        {/* Product Screenshot */}
-        <ScrollReveal direction="up" delay={500} className="mt-16 lg:mt-24">
-          <div className="relative max-w-5xl mx-auto">
-            <div className="glow-card rounded-2xl overflow-hidden shadow-2xl">
-              <picture>
-                <source
-                  srcSet="/hero-screenshot-1.png 1x"
-                  media="(min-width: 1024px)"
-                />
-                <source
-                  srcSet="/hero-screenshot-1.png 1x"
-                  media="(min-width: 640px)"
-                />
-                <img
-                  src="/hero-screenshot-1.png"
-                  alt="YUNIX Trading Platform Dashboard"
-                  className="w-full h-auto"
-                  loading="eager"
-                  fetchPriority="high"
-                  width="1920"
-                  height="1080"
-                />
-              </picture>
-            </div>
+        {/* Dashboard Mockup */}
+        <ScrollReveal direction="up" delay={500} className="mt-20 lg:mt-24">
+          <div className="relative max-w-6xl mx-auto">
+            <DashboardMockup />
           </div>
         </ScrollReveal>
 
@@ -148,23 +115,21 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
   );
 }
 
-interface StatCardProps {
+interface StatBarProps {
   value: number;
   suffix: string;
   label: string;
-  delay: number;
 }
 
-function StatCard({ value, suffix, label, delay }: StatCardProps) {
+function StatBar({ value, suffix, label }: StatBarProps) {
   return (
-    <div 
-      className="text-center p-4 rounded-2xl bg-card/50 border border-border/50 backdrop-blur-sm hover:bg-card/80 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
-        <AnimatedCounter target={value} suffix={suffix} duration={2000} />
+    <div className="px-6 py-4 text-center">
+      <div className="font-display text-2xl sm:text-3xl font-bold text-foreground leading-none mb-1">
+        <span className="text-primary">
+          <AnimatedCounter target={value} suffix={suffix} duration={2000} />
+        </span>
       </div>
-      <div className="text-xs sm:text-sm text-muted-foreground font-medium">
+      <div className="text-xs text-muted-foreground font-medium tracking-wide uppercase">
         {label}
       </div>
     </div>

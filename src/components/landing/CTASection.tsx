@@ -1,81 +1,65 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import ScrollReveal from './ScrollReveal';
-import FloatingElement from './FloatingElement';
 
 export default function CTASection() {
   const navigate = useNavigate();
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [buttonTransform, setButtonTransform] = useState({ x: 0, y: 0 });
-
-  // Magnetic button effect
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    setButtonTransform({ x: x * 0.2, y: y * 0.2 });
-  };
-
-  const handleMouseLeave = () => {
-    setButtonTransform({ x: 0, y: 0 });
-  };
 
   return (
     <section className="py-20 lg:py-32 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <ScrollReveal direction="scale">
-          <Card className="relative overflow-hidden border-primary/20">
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+        <ScrollReveal direction="up">
+          <div className="relative bg-card border border-border rounded-3xl p-12 sm:p-16 lg:p-20 text-center overflow-hidden">
+            {/* Gradient glow effect */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-[600px] h-[600px] rounded-full bg-primary/10 blur-3xl" />
+            </div>
             
-            {/* Floating orbs */}
-            <FloatingElement intensity={10} className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-primary/10 blur-3xl" />
-            <FloatingElement intensity={15} className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-accent/10 blur-3xl" />
+            {/* Grid line background */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
+              backgroundImage: `
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px)
+              `,
+              backgroundSize: '60px 60px',
+              maskImage: 'radial-gradient(circle at center, transparent 30%, black 80%)'
+            }} />
             
-            <CardContent className="relative p-8 sm:p-12 lg:p-16 text-center">
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mb-6">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
-                Ready to Transform{" "}
-                <span className="gradient-text">Your Trading?</span>
+            <div className="relative">
+              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4">
+                Start trading with<br />
+                <span className="bg-gradient-to-r from-primary to-yellow-500 bg-clip-text text-transparent">real clarity</span>
               </h2>
               
-              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Join thousands of successful traders who use YUNIX to track, analyze, 
-                and improve their trading performance every day.
+              <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto font-light">
+                Join over 100 traders who use YUNIX to track their edge, stay disciplined, and grow their accounts.
               </p>
               
-              <div 
-                className="inline-block"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-              >
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Button 
-                  ref={buttonRef}
                   size="lg" 
                   onClick={() => navigate("/auth")} 
-                  className="group px-8 h-14 text-base font-semibold shadow-lg hover:shadow-2xl transition-all duration-300"
-                  style={{ 
-                    transform: `translate(${buttonTransform.x}px, ${buttonTransform.y}px)`,
-                    transition: 'transform 0.2s ease-out, box-shadow 0.3s'
-                  }}
+                  className="group w-full sm:w-auto px-8 h-14 text-base font-semibold bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all duration-300 hover:-translate-y-0.5 rounded-xl"
                 >
-                  Start Trading Smarter Today
-                  <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  Create Free Account →
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={() => navigate("/auth")} 
+                  className="group w-full sm:w-auto px-8 h-14 text-base font-semibold bg-card border-border hover:bg-card/80 transition-all duration-300 rounded-xl"
+                >
+                  View Pricing
                 </Button>
               </div>
               
-              <p className="mt-6 text-sm text-muted-foreground">
-                No credit card required • Free forever plan available
+              <p className="mt-5 text-sm text-muted-foreground">
+                No credit card required · Free plan available · Cancel anytime
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </ScrollReveal>
       </div>
     </section>

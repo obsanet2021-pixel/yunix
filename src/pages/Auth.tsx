@@ -13,6 +13,7 @@ import { z } from "zod";
 import { Eye, EyeOff, Loader2, ArrowLeft, Send, CheckCircle, MessageCircle, Chrome } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import DashboardMockup from "@/components/landing/DashboardMockup";
 
 const authSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address").max(255),
@@ -145,6 +146,29 @@ export default function Auth() {
     return '/app/dashboard';
   };
 
+  const handlePostAuthRedirect = useCallback(async (userId: string, userEmail: string) => {
+    // Check if user has staff role via new system
+    const { data: isStaff } = await supabase.rpc('has_role', {
+      _user_id: userId,
+      _role: 'staff'
+    });
+    
+    if (isStaff) {
+      await linkStaffUser(userId, userEmail);
+      // Get actual role name from staff table
+      const { data: staff } = await supabase
+        .from("staff")
+        .select(`role:admin_roles(name)`)
+        .eq("email", userEmail.toLowerCase())
+        .single();
+      const role = staff ? (Array.isArray(staff.role) ? staff.role[0] : staff.role) : null;
+      const redirectRoute = getRedirectRoute(role?.name || null);
+      navigate(redirectRoute, { replace: true });
+    } else {
+      navigate("/app/dashboard", { replace: true });
+    }
+  }, [navigate]);
+
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
@@ -169,29 +193,6 @@ export default function Auth() {
 
     return () => subscription.unsubscribe();
   }, [navigate, authUser, handlePostAuthRedirect]);
-
-  const handlePostAuthRedirect = useCallback(async (userId: string, userEmail: string) => {
-    // Check if user has staff role via new system
-    const { data: isStaff } = await supabase.rpc('has_role', {
-      _user_id: userId,
-      _role: 'staff'
-    });
-    
-    if (isStaff) {
-      await linkStaffUser(userId, userEmail);
-      // Get actual role name from staff table
-      const { data: staff } = await supabase
-        .from("staff")
-        .select(`role:admin_roles(name)`)
-        .eq("email", userEmail.toLowerCase())
-        .single();
-      const role = staff ? (Array.isArray(staff.role) ? staff.role[0] : staff.role) : null;
-      const redirectRoute = getRedirectRoute(role?.name || null);
-      navigate(redirectRoute, { replace: true });
-    } else {
-      navigate("/app/dashboard", { replace: true });
-    }
-  }, [navigate]);
 
   // STEP 1: Send verification code - check if user has Telegram linked
   const handleSendVerificationCode = async (e: React.FormEvent) => {
@@ -982,28 +983,25 @@ export default function Auth() {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background">
         {/* Background Effects */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute -top-[100px] -right-[100px] w-[600px] h-[600px] rounded-full blur-[80px]" style={{ background: 'radial-gradient(circle, rgba(250,140,56,0.12) 0%, transparent 70%)' }} />
+          <div className="absolute -bottom-[50px] -left-[100px] w-[500px] h-[500px] rounded-full blur-[80px]" style={{ background: 'radial-gradient(circle, rgba(74,158,255,0.08) 0%, transparent 70%)' }} />
         </div>
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center items-center h-full p-12 text-center">
-          <div className="max-w-md">
-            <h1 className="text-4xl lg:text-5xl font-bold mb-6 gradient-text">
-              Success in Trading Begins Today
+          <div className="max-w-md w-full">
+            <h1 className="font-display text-4xl lg:text-5xl font-extrabold mb-6">
+              <span className="bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent">
+                Start Trading
+              </span>
+              <br />
+              With Real Clarity
             </h1>
-            <p className="text-lg text-muted-foreground mb-8">
-              Join hundreds of disciplined traders who trust YUNIX to track, analyze, and master their trading journey with AI-powered insights.
+            <p className="text-lg text-muted-foreground mb-8 font-light">
+              Join over 100 traders who use YUNIX to track their edge, stay disciplined, and grow their accounts.
             </p>
             <div className="relative max-w-lg mx-auto">
-              <div className="glow-card rounded-2xl overflow-hidden shadow-2xl">
-                <img
-                  src="/hero-screenshot-1.png"
-                  alt="YUNIX Trading Platform Dashboard"
-                  className="w-full h-auto"
-                  loading="eager"
-                />
-              </div>
+              <DashboardMockup />
             </div>
           </div>
         </div>

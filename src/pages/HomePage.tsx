@@ -21,6 +21,9 @@ import StatsSection from "@/components/landing/StatsSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import CTASection from "@/components/landing/CTASection";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import MarketTicker from "@/components/landing/MarketTicker";
+import ComparisonTable from "@/components/landing/ComparisonTable";
+import MetricsSection from "@/components/landing/MetricsSection";
 
 interface Course {
   id: string;
@@ -121,19 +124,19 @@ export default function HomePage() {
       <ScrollProgress />
 
       {/* Navigation */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-background/95 backdrop-blur-lg border-b border-border shadow-sm' : 'bg-transparent'}`} role="banner">
+      <header id="navbar" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${isScrolled ? 'bg-background/85 backdrop-blur-2xl border-b border-border' : 'bg-transparent border-b border-transparent'}`} role="banner">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-20">
+          <div className="flex items-center justify-between h-20">
             <YunixLogo />
-            <nav className="hidden md:flex items-center gap-1 bg-background/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-full px-2 py-1.5 shadow-lg shadow-black/5" role="navigation" aria-label="Main navigation">
-              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Features</a>
-              <a href="#courses" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Courses</a>
-              <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Testimonials</a>
-              <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Contact</a>
+            <nav className="hidden md:flex items-center gap-2" role="navigation" aria-label="Main navigation">
+              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Features</a>
+              <a href="#compare" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Compare</a>
+              <a href="#courses" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Courses</a>
+              <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Reviews</a>
             </nav>
             <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={() => navigate("/auth")} className="hidden sm:inline-flex focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Sign In</Button>
-              <Button onClick={() => navigate("/auth")} className="hidden sm:inline-flex bg-primary hover:bg-primary/90 shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Get Started</Button>
+              <Button variant="ghost" onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-5 py-2 h-10 text-sm font-medium text-muted-foreground border border-border hover:text-foreground hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">Sign In</Button>
+              <Button onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-6 py-2 h-10 text-sm font-semibold bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-lg shadow-primary/25 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">Start Free →</Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -155,6 +158,10 @@ export default function HomePage() {
       <main id="main-content" className="scroll-snap-section">
         <HeroSection userCount={userCount} />
       </main>
+      
+      {/* Market Ticker */}
+      <MarketTicker />
+      
       <section className="scroll-snap-section" aria-labelledby="problem-heading">
         <ProblemSection />
       </section>
@@ -164,6 +171,12 @@ export default function HomePage() {
       <section id="features" aria-labelledby="features-heading">
         <FeatureShowcase />
       </section>
+
+      {/* Comparison Table */}
+      <ComparisonTable />
+
+      {/* Metrics Section */}
+      <MetricsSection />
 
       {/* Courses Section */}
       {courses.length > 0 && (
@@ -218,96 +231,89 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer id="contact" className="border-t border-border bg-card" role="contentinfo">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12 mb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <YunixLogo />
               </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Your professional trading platform.
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed max-w-[200px]">
+                The AI-powered trading journal built for disciplined, funded traders.
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <a
                   href="https://www.youtube.com/@yunixgroup?sub_confirmation=1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="h-9 w-9 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground text-sm"
                   aria-label="Follow YUNIX on YouTube"
                 >
-                  <Youtube className="h-4 w-4" />
+                  YT
                 </a>
                 <a
                   href="https://t.me/OfficialYunix"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="h-9 w-9 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground text-sm"
                   aria-label="Join YUNIX Telegram"
                 >
-                  <Send className="h-4 w-4" />
+                  TG
                 </a>
                 <a
                   href="https://www.instagram.com/yunixofficial1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="h-9 w-9 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground text-sm"
                   aria-label="Follow YUNIX on Instagram"
                 >
-                  <Instagram className="h-4 w-4" />
+                  IG
                 </a>
                 <a
                   href="https://www.tiktok.com/@yunixofficial"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="h-9 w-9 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground text-sm"
                   aria-label="Follow YUNIX on TikTok"
                 >
-                  <TikTokIcon className="h-4 w-4" />
+                  TK
                 </a>
               </div>
             </div>
 
             {/* Product */}
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-display font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Product</h4>
               <ul className="space-y-3">
                 <li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Features</a></li>
-                <li><a href="#courses" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Courses</a></li>
-                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Trade Journal</a></li>
                 <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Analytics</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">AI Assistant</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Backtesting</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Pricing</a></li>
+              </ul>
+            </div>
+
+            {/* Education */}
+            <div>
+              <h4 className="font-display font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Education</h4>
+              <ul className="space-y-3">
+                <li><a href="#courses" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">All Courses</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Forex Basics</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Risk Management</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Funded Trading</a></li>
+                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Strategy Building</a></li>
               </ul>
             </div>
 
             {/* Company */}
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
+              <h4 className="font-display font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Company</h4>
               <ul className="space-y-3">
-                <li><a href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">About Us</a></li>
-                <li><a href="/careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Careers</a></li>
+                <li><a href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">About</a></li>
                 <li><a href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Blog</a></li>
+                <li><a href="/careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Careers</a></li>
                 <li><a href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Contact</a></li>
-              </ul>
-            </div>
-
-            {/* Resources */}
-            <div>
-              <h4 className="font-semibold mb-4">Resources</h4>
-              <ul className="space-y-3">
-                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Documentation</a></li>
-                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Tutorials</a></li>
-                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">API Reference</a></li>
-                <li><a href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Community</a></li>
-              </ul>
-            </div>
-
-            {/* Legal */}
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-3">
                 <li><a href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Privacy Policy</a></li>
-                <li><a href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Terms of Service</a></li>
-                <li><a href="/cookies" className="text-sm text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">Cookie Policy</a></li>
               </ul>
             </div>
           </div>
@@ -316,6 +322,9 @@ export default function HomePage() {
           <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               © 2026 YUNIX. All rights reserved.
+            </p>
+            <p className="text-sm text-muted-foreground font-mono text-xs">
+              v2.0 · Built for traders, by traders
             </p>
           </div>
         </div>
