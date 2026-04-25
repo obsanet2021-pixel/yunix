@@ -219,10 +219,21 @@ export default function Auth() {
       const { success, action, message, delivery, telegram_link, requiresTelegramLink, challengeId: returnedChallengeId } = response.data;
 
       if (success && action === 'OTP_SENT') {
-        const deliveryMethod = delivery === 'telegram' ? 'Telegram' : 'email';
+        if (delivery === 'security') {
+          // User not found - show generic success for security (don't reveal if email exists)
+          toast({
+            title: "Request Received",
+            description: "If this email is registered, you will receive a verification code.",
+          });
+          // Don't proceed to OTP entry since user doesn't exist
+          return;
+        }
+        const deliveryMethod = delivery === 'telegram' ? 'Telegram' : delivery === 'console' ? 'server logs' : 'email';
         toast({
           title: "Code Sent!",
-          description: `Check your ${deliveryMethod} for the verification code.`,
+          description: delivery === 'console' 
+            ? "Verification code generated (check server logs for testing)."
+            : `Check your ${deliveryMethod} for the verification code.`,
         });
         setChallengeId(returnedChallengeId);
         setResetStep('enter_otp');

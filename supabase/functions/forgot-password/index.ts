@@ -31,11 +31,17 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     // Check if user exists
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, telegram_chat_id')
       .eq('email', normalizedEmail)
       .maybeSingle();
+
+    console.log(`Password reset request for ${normalizedEmail}:`, {
+      userFound: !!user,
+      hasTelegram: !!user?.telegram_chat_id,
+      userError: userError?.message
+    });
 
     // Generate challenge ID for OTP verification
     const challengeId = crypto.randomUUID();
@@ -165,12 +171,14 @@ serve(async (req: Request) => {
       );
     }
 
-    // User doesn't exist - still return challengeId for security (but won't work)
+    // User doesn't exist - still return generic success for security
     return new Response(
       JSON.stringify({
         success: true,
+        action: 'OTP_SENT',
         challengeId: challengeId,
-        message: 'If the email exists, a verification code has been sent'
+        message: 'If the email exists, a verification code has been sent',
+        delivery: 'security'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
