@@ -41,33 +41,7 @@ serve(async (req: Request) => {
     const challengeId = crypto.randomUUID();
 
     if (user) {
-      // Generate OTP code
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-      // Hash the OTP for storage
-      const encoder = new TextEncoder();
-      const data = encoder.encode(otpCode);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      const hashedOTP = btoa(String.fromCharCode(...new Uint8Array(hash)));
-
-      // Store challenge in auth_challenges table
-      await supabase
-        .from('auth_challenges')
-        .insert({
-          id: challengeId,
-          user_id: user.id,
-          email: normalizedEmail,
-          type: 'password_reset',
-          channel: 'telegram',
-          code_hash: hashedOTP,
-          token: challengeId,
-          expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-          used: false,
-          attempt_count: 0,
-          locked_until: null
-        });
-
-      // Try to send via Telegram OTP system
+      // Try to send via Telegram OTP system first
       const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
       const telegramResponse = await fetch(`${supabaseUrl}/functions/v1/generate-telegram-otp`, {
         method: 'POST',
@@ -87,17 +61,54 @@ serve(async (req: Request) => {
       // Check Telegram response
       if (telegramResponse.ok && otpData.success) {
         if (otpData.data.action === 'OTP_SENT') {
-          // Return challengeId so frontend can verify OTP
-          return new Response(
-            JSON.stringify({
-              success: true,
-              action: 'OTP_SENT',
-              challengeId: challengeId,
-              message: 'Verification code sent to your Telegram',
-              delivery: 'telegram'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          // OTP was sent via Telegram - now store the challenge for verification
+          // We need to get the OTP from telegram_otp table to hash it for auth_challenges
+          const { data: telegramOtp } = await supabase
+            .from('telegram_otp')
+            .select('raw_otp_code')
+            .eq('email', normalizedEmail)
+            .eq('purpose', 'password_reset')
+            .eq('used', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (telegramOtp && telegramOtp.raw_otp_code) {
+            // Hash the OTP for storage in auth_challenges
+            const encoder = new TextEncoder();
+            const data = encoder.encode(telegramOtp.raw_otp_code);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            const hashedOTP = btoa(String.fromCharCode(...new Uint8Array(hash)));
+
+            // Store challenge in auth_challenges table
+            await supabase
+              .from('auth_challenges')
+              .insert({
+                id: challengeId,
+                user_id: user.id,
+                email: normalizedEmail,
+                type: 'password_reset',
+                channel: 'telegram',
+                code_hash: hashedOTP,
+                token: challengeId,
+                expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+                used: false,
+                attempt_count: 0,
+                locked_until: null
+              });
+
+            // Return challengeId so frontend can verify OTP
+            return new Response(
+              JSON.stringify({
+                success: true,
+                action: 'OTP_SENT',
+                challengeId: challengeId,
+                message: 'Verification code sent to your Telegram',
+                delivery: 'telegram'
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         } else if (otpData.data.action === 'TELEGRAM_LINK_REQUIRED') {
           return new Response(
             JSON.stringify({
@@ -113,9 +124,33 @@ serve(async (req: Request) => {
         }
       }
 
-      // Fallback: Log OTP for testing
+      // Fallback: Generate OTP locally and log it
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
       console.log(`OTP for ${normalizedEmail} (Telegram fallback): ${otpCode}`);
       console.log(`Challenge ID: ${challengeId}`);
+
+      // Hash the OTP for storage
+      const encoder = new TextEncoder();
+      const data = encoder.encode(otpCode);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      const hashedOTP = btoa(String.fromCharCode(...new Uint8Array(hash)));
+
+      // Store challenge in auth_challenges table
+      await supabase
+        .from('auth_challenges')
+        .insert({
+          id: challengeId,
+          user_id: user.id,
+          email: normalizedEmail,
+          type: 'password_reset',
+          channel: 'console',
+          code_hash: hashedOTP,
+          token: challengeId,
+          expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          used: false,
+          attempt_count: 0,
+          locked_until: null
+        });
 
       // Return challengeId even if Telegram fails (for testing)
       return new Response(
