@@ -13,7 +13,6 @@ import { z } from "zod";
 import { Eye, EyeOff, Loader2, ArrowLeft, Send, CheckCircle, MessageCircle, Chrome } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import DashboardMockup from "@/components/landing/DashboardMockup";
 
 const authSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address").max(255),
@@ -1000,9 +999,6 @@ export default function Auth() {
             <p className="text-lg text-muted-foreground mb-8 font-light">
               Join over 100 traders who use YUNIX to track their edge, stay disciplined, and grow their accounts.
             </p>
-            <div className="relative max-w-lg mx-auto">
-              <DashboardMockup />
-            </div>
           </div>
         </div>
 
