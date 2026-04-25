@@ -977,217 +977,265 @@ export default function Auth() {
 
   // Main Sign In / Sign Up View
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <div className="w-full max-w-md">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link to="/">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Link>
-        </Button>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl text-center">WELCOME TO YUNIX</CardTitle>
-            <CardDescription className="text-center">
-              Sign in to your account or create a new one
-            </CardDescription>
-          {isStaffEmail && (
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <Badge variant="secondary" className="bg-primary/20 text-primary">
-                Staff: {staffRoleName}
-              </Badge>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+      {/* Visual Panel - Left Side */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+        {/* Background Effects */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center items-center h-full p-12 text-center">
+          <div className="max-w-md">
+            <h1 className="text-4xl lg:text-5xl font-bold mb-6 gradient-text">
+              Success in Trading Begins Today
+            </h1>
+            <p className="text-lg text-muted-foreground mb-8">
+              Join hundreds of disciplined traders who trust YUNIX to track, analyze, and master their trading journey with AI-powered insights.
+            </p>
+            <div className="relative max-w-lg mx-auto">
+              <div className="glow-card rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  src="/hero-screenshot-1.png"
+                  alt="YUNIX Trading Platform Dashboard"
+                  className="w-full h-auto"
+                  loading="eager"
+                />
+              </div>
             </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <button
-                      type="button"
-                      className="text-sm text-primary hover:underline"
-                      onClick={() => setShowResetPassword(true)}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="signin-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : isStaffEmail ? `Sign In as ${staffRoleName}` : "Sign In"}
-                </Button>
+          </div>
+        </div>
 
-                {isEnabled('google_sign_in') && (
-                  <>
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
+        {/* Back Button */}
+        <div className="absolute top-6 left-6 z-20">
+          <Button variant="ghost" asChild className="bg-background/50 backdrop-blur-sm hover:bg-background/80">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Form Panel - Right Side */}
+      <div className="flex-1 flex items-center justify-center p-4 lg:p-12 bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="w-full max-w-md">
+          {/* Mobile Back Button */}
+          <div className="lg:hidden mb-4">
+            <Button variant="ghost" asChild>
+              <Link to="/">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Home
+              </Link>
+            </Button>
+          </div>
+
+          <Card className="glow-card">
+            <CardHeader>
+              <CardTitle className="text-xl sm:text-2xl text-center">WELCOME TO YUNIX</CardTitle>
+              <CardDescription className="text-center">
+                Sign in to your account or create a new one
+              </CardDescription>
+            {isStaffEmail && (
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <Badge variant="secondary" className="bg-primary/20 text-primary">
+                  Staff: {staffRoleName}
+                </Badge>
+              </div>
+            )}
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="signin">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="signin">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signin-password">Password</Label>
+                        <button
+                          type="button"
+                          className="text-sm text-primary hover:underline"
+                          onClick={() => setShowResetPassword(true)}
+                        >
+                          Forgot password?
+                        </button>
                       </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                      <div className="relative">
+                        <Input
+                          id="signin-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full"
-                      onClick={handleGoogleSignIn}
-                      disabled={loading}
-                    >
-                      <Chrome className="h-4 w-4 mr-2" />
-                      Sign in with Google
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Signing in..." : isStaffEmail ? `Sign In as ${staffRoleName}` : "Sign In"}
                     </Button>
-                  </>
-                )}
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-firstname">First Name *</Label>
-                    <Input
-                      id="signup-firstname"
-                      type="text"
-                      placeholder="John"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-lastname">Last Name *</Label>
-                    <Input
-                      id="signup-lastname"
-                      type="text"
-                      placeholder="Doe"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="signup-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  By signing up, you agree to our{" "}
-                  <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
-                  {" "}and{" "}
-                  <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
-                </p>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : isStaffEmail ? `Join as ${staffRoleName}` : "Sign Up"}
-                </Button>
 
-                {isEnabled('google_sign_in') && (
-                  <>
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
+                    {isEnabled('google_sign_in') && (
+                      <>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="w-full"
+                          onClick={handleGoogleSignIn}
+                          disabled={loading}
+                        >
+                          <Chrome className="h-4 w-4 mr-2" />
+                          Sign in with Google
+                        </Button>
+                      </>
+                    )}
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-firstname">First Name *</Label>
+                        <Input
+                          id="signup-firstname"
+                          type="text"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                          disabled={loading}
+                        />
                       </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-lastname">Last Name *</Label>
+                        <Input
+                          id="signup-lastname"
+                          type="text"
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                          disabled={loading}
+                        />
                       </div>
                     </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full"
-                      onClick={handleGoogleSignIn}
-                      disabled={loading}
-                    >
-                      <Chrome className="h-4 w-4 mr-2" />
-                      Sign up with Google
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="signup-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      By signing up, you agree to our{" "}
+                      <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
+                      {" "}and{" "}
+                      <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                    </p>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Creating account..." : isStaffEmail ? `Join as ${staffRoleName}` : "Sign Up"}
                     </Button>
-                  </>
-                )}
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex justify-center border-t pt-4">
-          <p className="text-xs text-muted-foreground">
-            <Link to="/terms" className="hover:text-primary hover:underline">Terms of Service</Link>
-            {" · "}
-            <Link to="/privacy" className="hover:text-primary hover:underline">Privacy Policy</Link>
-          </p>
-        </CardFooter>
-        </Card>
+
+                    {isEnabled('google_sign_in') && (
+                      <>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="w-full"
+                          onClick={handleGoogleSignIn}
+                          disabled={loading}
+                        >
+                          <Chrome className="h-4 w-4 mr-2" />
+                          Sign up with Google
+                        </Button>
+                      </>
+                    )}
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+            <CardFooter className="flex justify-center border-t pt-4">
+              <p className="text-xs text-muted-foreground">
+                <Link to="/terms" className="hover:text-primary hover:underline">Terms of Service</Link>
+                {" · "}
+                <Link to="/privacy" className="hover:text-primary hover:underline">Privacy Policy</Link>
+              </p>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     </div>
   );
