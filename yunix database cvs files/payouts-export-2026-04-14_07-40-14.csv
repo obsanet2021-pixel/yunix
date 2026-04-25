@@ -1,2 +1,0 @@
-id;user_id;prop_firm_id;amount;payout_date;trader_name;firm_name;certificate_url;extracted_data;notes;created_at;updated_at
-07f13c83-30ed-4a06-b8d0-8360b49bd038;729edbb5-3a37-4b62-b20b-2480dc5c7b2a;;44.7;2025-12-29;OBSAN OUMER;NOSTRO;https://bduwtkejrfmcggfwniqe.supabase.co/storage/v1/object/public/payout-certificates/729edbb5-3a37-4b62-b20b-2480dc5c7b2a/1773650170217.jpg;"{""balance"":null,""equity"":null,""floating_pnl"":null,""free_margin"":null,""margin_used"":null,""open_trades"":null}";;2026-03-16 08:38:00.042319+00;2026-03-16 08:38:00.042319+00

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,18 +67,37 @@ export default function Auth() {
   const [resetStep, setResetStep] = useState<ResetStep>('email');
   const [telegramLink, setTelegramLink] = useState("");
   const [otpCode, setOtpCode] = useState("");
+  const [challengeId, setChallengeId] = useState("");
   const [verifyingOTP, setVerifyingOTP] = useState(false);
   const [isStaffEmail, setIsStaffEmail] = useState(false);
   const [staffRoleName, setStaffRoleName] = useState<string | null>(null);
   const [showTelegramConnect, setShowTelegramConnect] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
   const [newUserEmail, setNewUserEmail] = useState<string | null>(null);
+  const { signIn, signUp, user: authUser } = useAuth();
   const isSignupInProgress = useRef(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isEnabled } = useFeatureToggles();
 
   const checkStaffEmail = async (emailToCheck: string) => {
+    // Use the new has_role RPC function
+    const { data: userData } = await supabase.auth.getUser();
+    
+    if (userData.user) {
+      const { data: isStaff } = await supabase.rpc('has_role', {
+        _user_id: userData.user.id,
+        _role: 'staff'
+      });
+      
+      if (isStaff) {
+        setIsStaffEmail(true);
+        setStaffRoleName('staff');
+        return { isStaff: true, roleName: 'staff', staffId: userData.user.id };
+      }
+    }
+    
+    // Fallback to old staff table check for existing data
     const { data: staff } = await supabase
       .from("staff")
       .select(`id, role:admin_roles(name)`)
@@ -90,6 +110,7 @@ export default function Auth() {
       setStaffRoleName(role?.name || null);
       return { isStaff: true, roleName: role?.name || null, staffId: staff.id };
     }
+    
     setIsStaffEmail(false);
     setStaffRoleName(null);
     return { isStaff: false, roleName: null, staffId: null };
@@ -97,10 +118,21 @@ export default function Auth() {
 
   const linkStaffUser = async (userId: string, userEmail: string) => {
     try {
-      await supabase.rpc('link_staff_account', { 
-        _user_id: userId, 
-        _user_email: userEmail 
-      });
+      // First try the new secure function
+      const { data: currentUser } = await supabase.auth.getUser();
+      if (currentUser.user) {
+        await supabase.rpc('link_staff_account_secure', { 
+          _user_id: userId, 
+          _user_email: userEmail,
+          _admin_user_id: currentUser.user.id
+        });
+      } else {
+        // Fallback to old function
+        await supabase.rpc('link_staff_account', { 
+          _user_id: userId, 
+          _user_email: userEmail 
+        });
+      }
     } catch (error) {
       console.error("Error linking staff account:", error);
     }
@@ -120,15 +152,14 @@ export default function Auth() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        handlePostAuthRedirect(session.user.id, session.user.email || '');
-      }
-    });
+    // Use authUser from useAuth instead of direct getSession
+    if (authUser && !isSignupInProgress.current) {
+      handlePostAuthRedirect(authUser.id, authUser.email || '');
+    }
 
+    // Keep auth state listener for events like PASSWORD_RECOVERY
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session && (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY')) {
-        // Skip redirect if this is a fresh signup - Telegram connect screen will handle it
         if (isSignupInProgress.current) {
           return;
         }
@@ -137,18 +168,24 @@ export default function Auth() {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, authUser]);
 
   const handlePostAuthRedirect = async (userId: string, userEmail: string) => {
-    const { data: staff } = await supabase
-      .from("staff")
-      .select(`id, role:admin_roles(name)`)
-      .eq("email", userEmail.toLowerCase())
-      .single();
-
-    if (staff) {
+    // Check if user has staff role via new system
+    const { data: isStaff } = await supabase.rpc('has_role', {
+      _user_id: userId,
+      _role: 'staff'
+    });
+    
+    if (isStaff) {
       await linkStaffUser(userId, userEmail);
-      const role = Array.isArray(staff.role) ? staff.role[0] : staff.role;
+      // Get actual role name from staff table
+      const { data: staff } = await supabase
+        .from("staff")
+        .select(`role:admin_roles(name)`)
+        .eq("email", userEmail.toLowerCase())
+        .single();
+      const role = staff ? (Array.isArray(staff.role) ? staff.role[0] : staff.role) : null;
       const redirectRoute = getRedirectRoute(role?.name || null);
       navigate(redirectRoute, { replace: true });
     } else {
@@ -159,7 +196,7 @@ export default function Auth() {
   // STEP 1: Send verification code - check if user has Telegram linked
   const handleSendVerificationCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes('@')) {
       toast({
         title: "Email required",
@@ -171,30 +208,40 @@ export default function Auth() {
 
     setLoading(true);
     try {
-      const response = await supabase.functions.invoke('generate-telegram-otp', {
-        body: { email, purpose: 'password_reset' }
+      const response = await supabase.functions.invoke('forgot-password', {
+        body: { email }
       });
 
       if (response.error) {
         throw new Error(response.error.message);
       }
 
-      const { telegramLink: link, alreadyLinked, otpSent } = response.data;
+      const { success, action, message, delivery, telegram_link, requiresTelegramLink, challengeId: returnedChallengeId } = response.data;
 
-      if (alreadyLinked && otpSent) {
+      if (success && action === 'OTP_SENT') {
+        const deliveryMethod = delivery === 'telegram' ? 'Telegram' : 'email';
         toast({
           title: "Code Sent!",
-          description: "Check your Telegram for the verification code.",
+          description: `Check your ${deliveryMethod} for the verification code.`,
         });
+        setChallengeId(returnedChallengeId);
         setResetStep('enter_otp');
-      } else {
-        setTelegramLink(link);
+      } else if (action === 'TELEGRAM_LINK_REQUIRED' || requiresTelegramLink) {
+        toast({
+          title: "Connect Telegram",
+          description: "Please connect your Telegram account to receive the reset code.",
+        });
+        setTelegramLink(telegram_link);
+        setChallengeId(returnedChallengeId);
         setResetStep('connect_telegram');
+      } else {
+        throw new Error(message || 'Failed to send verification code');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send verification code";
       toast({
         title: "Error",
-        description: error.message || "Failed to send verification code",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -202,20 +249,20 @@ export default function Auth() {
     }
   };
 
-  const handleConnectTelegram = () => {
-    window.open(telegramLink, '_blank');
-    toast({
-      title: "Telegram Opened",
-      description: "Click START in the bot to receive your code.",
-    });
-    setResetStep('enter_otp');
-  };
-
   const handleVerifyOTP = async () => {
     if (otpCode.length !== 6) {
       toast({
         title: "Invalid code",
-        description: "Please enter the 6-digit code from Telegram.",
+        description: "Please enter the 6-digit code from your Telegram.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!challengeId) {
+      toast({
+        title: "Error",
+        description: "Challenge ID missing. Please restart the process.",
         variant: "destructive",
       });
       return;
@@ -223,12 +270,18 @@ export default function Auth() {
 
     setVerifyingOTP(true);
     try {
-      const response = await supabase.functions.invoke('verify-telegram-otp', {
-        body: { email, otpCode, purpose: 'password_reset' }
+      const response = await supabase.functions.invoke('auth-verify-challenge', {
+        body: { challengeId, code: otpCode }
       });
 
-      if (response.error || !response.data?.verified) {
+      if (response.error || !response.data?.success) {
         throw new Error(response.data?.error || 'Invalid or expired code');
+      }
+
+      // Store the recovery token for password reset
+      const recoveryToken = response.data.recoveryToken;
+      if (recoveryToken) {
+        localStorage.setItem('reset_recovery_token', recoveryToken);
       }
 
       toast({
@@ -249,27 +302,32 @@ export default function Auth() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const validated = passwordSchema.parse({ password: newPassword, confirmPassword });
       setLoading(true);
 
-      const response = await supabase.functions.invoke('verify-password-reset-otp', {
-        body: { 
-          email, 
-          otp: otpCode,
-          newPassword: validated.password 
-        }
+      const recoveryToken = localStorage.getItem('reset_recovery_token');
+      if (!recoveryToken) {
+        throw new Error('Session expired. Please restart the password reset process.');
+      }
+
+      // Use the recovery token to update password via Supabase Auth
+      const { error } = await supabase.auth.updateUser({
+        password: validated.password
       });
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (error) {
+        throw error;
       }
 
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
+      // Clean up
+      localStorage.removeItem('reset_recovery_token');
 
+      toast({
+        title: "Password Updated!",
+        description: "Your password has been successfully reset.",
+      });
       setResetStep('success');
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -293,29 +351,18 @@ export default function Auth() {
   const handleResendOTP = async () => {
     setLoading(true);
     try {
-      const response = await supabase.functions.invoke('generate-telegram-otp', {
-        body: { email, purpose: 'password_reset' }
+      const response = await supabase.functions.invoke('forgot-password', {
+        body: { email }
       });
 
       if (response.error) {
         throw new Error(response.error.message);
       }
 
-      const { alreadyLinked, otpSent, telegramLink: link } = response.data;
-
-      if (alreadyLinked && otpSent) {
-        toast({
-          title: "Code Resent!",
-          description: "Check your Telegram for the new code.",
-        });
-      } else {
-        setTelegramLink(link);
-        window.open(link, '_blank');
-        toast({
-          title: "Telegram Opened",
-          description: "Click START in the bot to receive your code.",
-        });
-      }
+      toast({
+        title: "Code Resent!",
+        description: "Check your email for the new reset code.",
+      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -341,17 +388,15 @@ export default function Auth() {
         isSignupInProgress.current = true;
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email: validated.email,
-        password: validated.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            first_name: validated.firstName,
-            last_name: validated.lastName,
-          },
-        },
-      });
+      // Use useAuth's signUp instead of direct supabase call
+      const { error } = await signUp(
+        validated.email, 
+        validated.password, 
+        {
+          first_name: validated.firstName,
+          last_name: validated.lastName,
+        }
+      );
 
       if (error) {
         if (error.message.includes("already registered") && staffCheck.isStaff) {
@@ -359,10 +404,8 @@ export default function Auth() {
             title: "Staff account exists",
             description: "Signing you in instead...",
           });
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: validated.email,
-            password: validated.password,
-          });
+          // Use useAuth's signIn
+          const { error: signInError } = await signIn(validated.email, validated.password);
           if (signInError) {
             toast({
               title: "Sign in required",
@@ -383,27 +426,31 @@ export default function Auth() {
             variant: "destructive",
           });
         }
-      } else if (data.user) {
-        if (staffCheck.isStaff) {
-          isSignupInProgress.current = false; // Reset for staff - let them redirect
-          await linkStaffUser(data.user.id, validated.email);
-          toast({
-            title: "Welcome to the team!",
-            description: `Account created. Redirecting to your ${staffCheck.roleName} dashboard...`,
-          });
-          // Navigate staff to their dashboard
-          const redirectRoute = getRedirectRoute(staffCheck.roleName);
-          navigate(redirectRoute, { replace: true });
-        } else {
-          // Show Telegram connection step for new regular users
-          // isSignupInProgress stays true to prevent auth redirect
-          setNewUserId(data.user.id);
-          setNewUserEmail(validated.email);
-          setShowTelegramConnect(true);
-          toast({
-            title: "Account created!",
-            description: "Please connect Telegram to receive notifications.",
-          });
+      } else {
+        // Get the newly created user (need to fetch from auth)
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        if (currentUser) {
+          if (staffCheck.isStaff) {
+            isSignupInProgress.current = false;
+            await linkStaffUser(currentUser.id, validated.email);
+            toast({
+              title: "Welcome to the team!",
+              description: `Account created. Redirecting to your ${staffCheck.roleName} dashboard...`,
+            });
+            const redirectRoute = getRedirectRoute(staffCheck.roleName);
+            navigate(redirectRoute, { replace: true });
+          } else {
+            // Show Telegram connection step
+            isSignupInProgress.current = true;
+            setNewUserId(currentUser.id);
+            setNewUserEmail(validated.email);
+            setShowTelegramConnect(true);
+            toast({
+              title: "Account created!",
+              description: "Please connect Telegram to receive notifications.",
+            });
+          }
         }
       }
     } catch (error) {
@@ -427,10 +474,8 @@ export default function Auth() {
       const validated = authSchema.parse({ email, password });
       setLoading(true);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: validated.email,
-        password: validated.password,
-      });
+      // Use useAuth's signIn
+      const { error } = await signIn(validated.email, validated.password);
 
       if (error) {
         toast({
@@ -438,7 +483,8 @@ export default function Auth() {
           description: error.message,
           variant: "destructive",
         });
-      } else if (data.user) {
+      } else {
+        // On success, useAuth will update user state, and useEffect will handle redirect
         const staffCheck = await checkStaffEmail(validated.email);
         if (staffCheck.isStaff) {
           toast({
@@ -640,6 +686,59 @@ export default function Auth() {
     }
 
     // STEP 3: Enter OTP Code
+    if (resetStep === 'connect_telegram') {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-xl sm:text-2xl text-center">Connect Telegram</CardTitle>
+              <CardDescription className="text-center">
+                Connect your Telegram account to receive the password reset code
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <MessageCircle className="h-16 w-16 text-primary" />
+                <p className="text-sm text-muted-foreground text-center">
+                  Click the button below to open Telegram and link your account
+                </p>
+              </div>
+
+              <Button
+                onClick={() => window.open(telegramLink, '_blank')}
+                className="w-full"
+                disabled={loading}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Open Telegram
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleSendVerificationCode}
+                disabled={loading}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                I've Connected Telegram
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setResetStep('email')}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     if (resetStep === 'enter_otp') {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
@@ -710,45 +809,6 @@ export default function Auth() {
               >
                 <Send className="h-4 w-4 mr-2" />
                 Resend Code
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={resetPasswordFlow}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Sign In
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    // STEP 2: Connect Telegram (only if not linked)
-    if (resetStep === 'connect_telegram') {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="text-xl sm:text-2xl text-center">Connect Telegram</CardTitle>
-              <CardDescription className="text-center">
-                To receive your verification code, please connect your Telegram account
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Email: <span className="font-medium text-foreground">{email}</span>
-              </p>
-              
-              <Button 
-                className="w-full" 
-                onClick={handleConnectTelegram}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Connect Telegram
               </Button>
 
               <Button

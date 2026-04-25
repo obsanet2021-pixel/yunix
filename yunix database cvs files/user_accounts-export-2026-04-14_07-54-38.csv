@@ -1,2 +1,0 @@
-id;user_id;account_name;mt5_login;mt5_server;investor_password_encrypted;encryption_iv;prop_firm_id;is_active;sync_status;last_sync_at;created_at;updated_at
-427f685c-cebc-479e-bde9-8801ff7c3265;729edbb5-3a37-4b62-b20b-2480dc5c7b2a;demo;100761314;MetaQuotes-Demo;aBAXPkFlKxcfYjQeMCDGoTROV/ntFxQk;j76/qnF8beNhRnoy;;true;pending;;2026-01-06 12:33:14.791486+00;2026-01-09 06:21:32.044727+00

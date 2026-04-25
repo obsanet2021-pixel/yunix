@@ -112,19 +112,38 @@ export default function AcceptInvite() {
 
   const linkStaffAccount = async (userId: string, email: string) => {
     try {
-      // Use the link_staff_account function
-      const { error } = await supabase.rpc('link_staff_account', {
-        _user_id: userId,
-        _user_email: email
-      });
+      // First try the new secure function
+      const { data: currentUser } = await supabase.auth.getUser();
+      if (currentUser.user) {
+        const { error } = await supabase.rpc('link_staff_account_secure', {
+          _user_id: userId,
+          _user_email: email,
+          _admin_user_id: currentUser.user.id
+        });
 
-      if (error) {
-        console.error('Error linking staff account:', error);
-        // Fallback: direct update
-        await supabase
-          .from('staff')
-          .update({ user_id: userId, status: 'active' })
-          .eq('email', email.toLowerCase());
+        if (error) {
+          console.error('Error linking staff account (secure):', error);
+          // Fallback to old function
+          await supabase.rpc('link_staff_account', {
+            _user_id: userId,
+            _user_email: email
+          });
+        }
+      } else {
+        // Fallback to old function
+        const { error } = await supabase.rpc('link_staff_account', {
+          _user_id: userId,
+          _user_email: email
+        });
+
+        if (error) {
+          console.error('Error linking staff account:', error);
+          // Final fallback: direct update
+          await supabase
+            .from('staff')
+            .update({ user_id: userId, status: 'active' })
+            .eq('email', email.toLowerCase());
+        }
       }
     } catch (error) {
       console.error('Error in linkStaffAccount:', error);

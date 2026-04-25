@@ -1,5 +1,5 @@
 -- Create trades table
-CREATE TABLE public.trades (
+CREATE TABLE IF NOT EXISTS public.trades (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   prop_firm_id UUID REFERENCES public.prop_firms(id) ON DELETE CASCADE,
@@ -14,30 +14,35 @@ CREATE TABLE public.trades (
 );
 
 -- Enable RLS
-ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.trades ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for trades
+DROP POLICY IF EXISTS "Users can view their own trades" ON public.trades;
 CREATE POLICY "Users can view their own trades"
 ON public.trades
 FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own trades" ON public.trades;
 CREATE POLICY "Users can create their own trades"
 ON public.trades
 FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own trades" ON public.trades;
 CREATE POLICY "Users can update their own trades"
 ON public.trades
 FOR UPDATE
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own trades" ON public.trades;
 CREATE POLICY "Users can delete their own trades"
 ON public.trades
 FOR DELETE
 USING (auth.uid() = user_id);
 
 -- Add trigger for updated_at
+DROP TRIGGER IF EXISTS update_trades_updated_at ON public.trades;
 CREATE TRIGGER update_trades_updated_at
 BEFORE UPDATE ON public.trades
 FOR EACH ROW
@@ -49,11 +54,13 @@ SET public = true
 WHERE id = 'prop-firm-screenshots';
 
 -- Update storage policies for prop-firm-screenshots to allow public read
+DROP POLICY IF EXISTS "Public can view prop firm screenshots" ON storage.objects;
 CREATE POLICY "Public can view prop firm screenshots"
 ON storage.objects
 FOR SELECT
 USING (bucket_id = 'prop-firm-screenshots');
 
+DROP POLICY IF EXISTS "Users can upload their own prop firm screenshots" ON storage.objects;
 CREATE POLICY "Users can upload their own prop firm screenshots"
 ON storage.objects
 FOR INSERT
@@ -62,6 +69,7 @@ WITH CHECK (
   AND auth.uid()::text = (storage.foldername(name))[1]
 );
 
+DROP POLICY IF EXISTS "Users can update their own prop firm screenshots" ON storage.objects;
 CREATE POLICY "Users can update their own prop firm screenshots"
 ON storage.objects
 FOR UPDATE
@@ -70,6 +78,7 @@ USING (
   AND auth.uid()::text = (storage.foldername(name))[1]
 );
 
+DROP POLICY IF EXISTS "Users can delete their own prop firm screenshots" ON storage.objects;
 CREATE POLICY "Users can delete their own prop firm screenshots"
 ON storage.objects
 FOR DELETE

@@ -1,5 +1,5 @@
 -- Add lessons table for course modules
-CREATE TABLE public.lessons (
+CREATE TABLE IF NOT EXISTS public.lessons (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE public.lessons (
 );
 
 -- Add student_progress table for tracking progress
-CREATE TABLE public.student_progress (
+CREATE TABLE IF NOT EXISTS public.student_progress (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
@@ -26,7 +26,7 @@ CREATE TABLE public.student_progress (
 );
 
 -- Add final_certificates table for master certificates
-CREATE TABLE public.final_certificates (
+CREATE TABLE IF NOT EXISTS public.final_certificates (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   certificate_url TEXT NOT NULL,

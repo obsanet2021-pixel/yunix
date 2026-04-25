@@ -1,5 +1,5 @@
 -- Create chat_conversations table to store chat sessions
-CREATE TABLE public.chat_conversations (
+CREATE TABLE IF NOT EXISTS public.chat_conversations (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   title TEXT NOT NULL DEFAULT 'New Chat',
@@ -8,7 +8,7 @@ CREATE TABLE public.chat_conversations (
 );
 
 -- Create chat_messages table to store individual messages
-CREATE TABLE public.chat_messages (
+CREATE TABLE IF NOT EXISTS public.chat_messages (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   conversation_id UUID NOT NULL REFERENCES public.chat_conversations(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
@@ -17,31 +17,36 @@ CREATE TABLE public.chat_messages (
 );
 
 -- Enable Row Level Security
-ALTER TABLE public.chat_conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.chat_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.chat_messages ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for chat_conversations
+DROP POLICY IF EXISTS "Users can view their own conversations" ON public.chat_conversations;
 CREATE POLICY "Users can view their own conversations" 
 ON public.chat_conversations 
 FOR SELECT 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own conversations" ON public.chat_conversations;
 CREATE POLICY "Users can create their own conversations" 
 ON public.chat_conversations 
 FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own conversations" ON public.chat_conversations;
 CREATE POLICY "Users can update their own conversations" 
 ON public.chat_conversations 
 FOR UPDATE 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own conversations" ON public.chat_conversations;
 CREATE POLICY "Users can delete their own conversations" 
 ON public.chat_conversations 
 FOR DELETE 
 USING (auth.uid() = user_id);
 
 -- Create policies for chat_messages
+DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.chat_messages;
 CREATE POLICY "Users can view messages in their conversations" 
 ON public.chat_messages 
 FOR SELECT 
@@ -53,6 +58,7 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Users can create messages in their conversations" ON public.chat_messages;
 CREATE POLICY "Users can create messages in their conversations" 
 ON public.chat_messages 
 FOR INSERT 
@@ -65,10 +71,11 @@ WITH CHECK (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_chat_conversations_user_id ON public.chat_conversations(user_id);
-CREATE INDEX idx_chat_messages_conversation_id ON public.chat_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_user_id ON public.chat_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON public.chat_messages(conversation_id);
 
 -- Create trigger to update updated_at
+DROP TRIGGER IF EXISTS update_chat_conversations_updated_at ON public.chat_conversations;
 CREATE TRIGGER update_chat_conversations_updated_at
 BEFORE UPDATE ON public.chat_conversations
 FOR EACH ROW

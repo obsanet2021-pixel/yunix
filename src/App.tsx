@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import UserLayout from "./components/UserLayout";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/Dashboard";
@@ -95,7 +97,11 @@ const AppContent = () => {
       <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
 
       {/* User App Routes (Protected) - USER Layout */}
-      <Route path="/app" element={<UserLayout />}>
+      <Route path="/app" element={
+        <ProtectedRoute>
+          <UserLayout />
+        </ProtectedRoute>
+      }>
         <Route index element={<Welcome />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="trade-management" element={<TradeManagement />} />
@@ -126,7 +132,11 @@ const AppContent = () => {
       </Route>
 
       {/* Admin Routes (Protected) - ADMIN Layout */}
-      <Route path="/app/admin" element={<AdminLayout />}>
+      <Route path="/app/admin" element={
+        <ProtectedRoute>
+          <AdminLayout />
+        </ProtectedRoute>
+      }>
         <Route index element={<Navigate to="/app/admin/ceo" replace />} />
         <Route path="profile" element={<AdminProfile />} />
         <Route path="ceo" element={<CEODashboard />} />
@@ -172,7 +182,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppContent />
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

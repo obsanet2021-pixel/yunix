@@ -31,15 +31,9 @@ serve(async (req) => {
     const userId = body?.user_id?.toString().trim();
     const email = body?.email?.toString().trim().toLowerCase();
     const telegramChatId = body?.telegram_chat_id?.toString().trim();
+    const purpose = body?.purpose || 'verification';
 
-    console.log("Incoming OTP payload:", { user_id: userId, email, telegram_chat_id: telegramChatId });
-
-    if (!userId || !email || !telegramChatId) {
-      return new Response(
-        JSON.stringify({ success: false, error: "INVALID_PAYLOAD" }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log("Incoming OTP payload:", { user_id: userId, email, telegram_chat_id: telegramChatId, purpose });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -62,6 +56,121 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Case 1: Email-only request (forgot password flow)
+    if (email && !userId && !telegramChatId) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, email, telegram_chat_id')
+        .eq('email', email)
+        .maybeSingle();
+
+      console.log("Profile lookup by email:", { profile, error: profileError?.message });
+
+      if (profileError || !profile) {
+        // Don't reveal if user exists for security
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: { action: 'USER_NOT_FOUND' },
+            message: 'If the email exists, a reset code has been sent' 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if Telegram is linked
+      if (!profile.telegram_chat_id) {
+        // Generate link token for Telegram connection
+        const linkToken = crypto.randomUUID();
+        const telegramLink = `https://t.me/YunixOfficialBot?start=otp_${linkToken}`;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              action: 'TELEGRAM_LINK_REQUIRED',
+              telegram_link: telegramLink,
+              link_token: linkToken
+            },
+            message: 'Please connect your Telegram account'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Telegram is linked - proceed with OTP generation
+      const finalUserId = profile.id;
+      const finalTelegramChatId = profile.telegram_chat_id.toString();
+      const finalEmail = profile.email;
+
+      const rawOtpCode = generateOTP();
+      const hashedOtpCode = await hashOTP(rawOtpCode);
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+      const { error: insertError } = await supabase.from('telegram_otp').insert({
+        user_id: finalUserId,
+        email: finalEmail,
+        telegram_chat_id: finalTelegramChatId,
+        otp_code: hashedOtpCode,
+        raw_otp_code: rawOtpCode,
+        purpose: purpose,
+        expires_at: expiresAt,
+        used: false,
+        created_at: new Date().toISOString()
+      });
+
+      if (insertError) {
+        console.error('OTP insert error:', insertError);
+        return new Response(
+          JSON.stringify({ success: false, error: "OTP_STORAGE_FAILED" }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const telegramResponse = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: finalTelegramChatId,
+          text: `🔐 Your YUNIX verification code is: ${rawOtpCode}\n\nThis code expires in 5 minutes. Do not share this code with anyone.`,
+        }),
+      });
+
+      const telegramBody = await telegramResponse.json().catch((parseError) => {
+        console.error('Telegram response parse error:', parseError);
+        return null;
+      });
+
+      console.log("Telegram delivery result:", { ok: telegramResponse.ok, body: telegramBody });
+
+      if (!telegramResponse.ok || telegramBody?.ok !== true) {
+        const telegramError = telegramBody?.description || telegramBody?.error || 'Telegram send failed';
+        console.error('Telegram send failed:', telegramError);
+        return new Response(
+          JSON.stringify({ success: false, error: `TELEGRAM_SEND_FAILED: ${telegramError}` }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          data: { action: 'OTP_SENT', delivery: 'telegram' },
+          message: 'OTP sent to Telegram' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Case 2: Full payload with user_id and telegram_chat_id (original flow)
+    if (!userId || !email || !telegramChatId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "INVALID_PAYLOAD" }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('email')

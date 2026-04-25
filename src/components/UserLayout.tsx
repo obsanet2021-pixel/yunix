@@ -3,7 +3,8 @@ import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
-import { User } from "@supabase/supabase-js";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { 
   LayoutDashboard, BookOpen, MessageSquare, Clock, TrendingUp, Award, 
   Calendar, Menu, X, LogOut, Sun, Moon, Activity, UserCog, HelpCircle, Send, Package,
@@ -71,17 +72,16 @@ export default function UserLayout() {
   const { theme, setTheme } = useTheme();
   const { isEnabled } = useFeatureToggles();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const { isStaff } = useStaffPermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('userSidebarCollapsed');
     return saved === 'true';
   });
-  const [user, setUser] = useState<User | null>(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
-  const [staffRoleName, setStaffRoleName] = useState<string | null>(null);
-  const [isStaff, setIsStaff] = useState(false);
   const [showAddAccountSheet, setShowAddAccountSheet] = useState(false);
 
   // Native haptic feedback (disabled for web builds)
@@ -128,88 +128,15 @@ export default function UserLayout() {
     checkMaintenance();
   }, []);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        checkStaffByEmail(session.user.email);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        checkStaffByEmail(session.user.email);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  // STRICT: Check staff membership BY EMAIL ONLY from Staff Management table
-  const checkStaffByEmail = async (userEmail?: string | null) => {
-    if (!userEmail) {
-      setStaffRoleName(null);
-      setIsStaff(false);
-      return;
-    }
-
-    // Query Staff Management table by email - SINGLE SOURCE OF TRUTH
-    const { data: staff, error } = await supabase
-      .from("staff")
-      .select(`id, user_id, status, role:admin_roles(name)`)
-      .eq("email", userEmail.toLowerCase())
-      .single();
-
-    if (error || !staff) {
-      // Email NOT in Staff Management = USER ONLY
-      setStaffRoleName(null);
-      setIsStaff(false);
-      return;
-    }
-
-    // Staff found - get role name (allow access even if pending, auto-activate)
-    const role = Array.isArray(staff.role) ? staff.role[0] : staff.role;
-    const roleName = (role as { name: string })?.name;
-    
-    if (roleName) {
-      setStaffRoleName(roleName);
-      setIsStaff(true);
-      
-      // Auto-activate if pending or link user_id if not set
-      if (staff.status !== 'active' || !staff.user_id) {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          // Use SECURITY DEFINER function to auto-activate and link
-          await supabase.rpc('link_staff_account', {
-            _user_id: currentUser.id,
-            _user_email: userEmail
-          });
-        }
-      }
-    } else {
-      setStaffRoleName(null);
-      setIsStaff(false);
-    }
-  };
-
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+    const { signOut } = useAuth();
+    await signOut();
   };
 
   const switchToAdmin = () => {
-    if (isStaff && staffRoleName && roleRoutes[staffRoleName]) {
-      navigate(roleRoutes[staffRoleName]);
+    // ✅ UI only - RLS protects data on backend
+    if (isStaff) {
+      navigate('/app/admin/ceo');
     }
   };
 
@@ -221,16 +148,12 @@ export default function UserLayout() {
     );
   }
 
-  if (maintenanceMode && !user) {
+  if (maintenanceMode && !isStaff) {
     return <MaintenancePage message={maintenanceMessage} />;
   }
 
   if (!user) {
     return null;
-  }
-
-  if (maintenanceMode && !isStaff) {
-    return <MaintenancePage message={maintenanceMessage} />;
   }
 
   return (
@@ -377,7 +300,7 @@ export default function UserLayout() {
             {!sidebarCollapsed && isStaff ? (
               <RoleSwitcher
                 currentMode="user"
-                staffRoleName={staffRoleName}
+                staffRoleName="Staff"
                 isStaff={isStaff}
                 onSwitchToUser={() => {}}
                 onSwitchToAdmin={switchToAdmin}

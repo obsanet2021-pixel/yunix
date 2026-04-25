@@ -1,23 +1,30 @@
 -- Add Plaque Order Manager role to admin_roles
-INSERT INTO public.admin_roles (name, description, permissions)
-VALUES (
-  'Plaque Order Manager',
-  'Manages plaque orders, shipping status, and order fulfillment',
-  '{
-    "manage_users": false,
-    "manage_roles": false,
-    "manage_finance": false,
-    "manage_courses": false,
-    "manage_analytics": false,
-    "manage_settings": false,
-    "manage_support": false,
-    "view_dashboard": true,
-    "view_invoices": true,
-    "view_reports": false,
-    "manage_plaque_orders": true
-  }'::jsonb
-)
-ON CONFLICT (name) DO NOTHING;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.admin_roles WHERE name = 'Plaque Order Manager'
+  ) THEN
+    INSERT INTO public.admin_roles (name, description, permissions)
+    VALUES (
+      'Plaque Order Manager',
+      'Manages plaque orders, shipping status, and order fulfillment',
+      '{
+        "manage_users": false,
+        "manage_roles": false,
+        "manage_finance": false,
+        "manage_courses": false,
+        "manage_analytics": false,
+        "manage_settings": false,
+        "manage_support": false,
+        "view_dashboard": true,
+        "view_invoices": true,
+        "view_reports": false,
+        "manage_plaque_orders": true
+      }'::jsonb
+    );
+  END IF;
+END
+$$;
 
 -- Create support_tickets table for user enquiries
 CREATE TABLE IF NOT EXISTS public.support_tickets (

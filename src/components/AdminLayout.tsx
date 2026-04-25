@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { 
   Crown, Users, BookOpen, Settings, DollarSign, HeadphonesIcon, 
   Menu, X, LogOut, Sun, Moon, UserCog, BarChart3, Package,
@@ -134,16 +135,14 @@ export default function AdminLayout() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const { isStaff, isAdmin } = useStaffPermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('adminSidebarCollapsed');
     return saved === 'true';
   });
-  const [user, setUser] = useState<User | null>(null);
-  const [staffRoleName, setStaffRoleName] = useState<string | null>(null);
-  const [isCEO, setIsCEO] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   
   // On mobile/tablet, always show full sidebar content when opened
@@ -154,27 +153,6 @@ export default function AdminLayout() {
     setSidebarCollapsed(newValue);
     localStorage.setItem('adminSidebarCollapsed', String(newValue));
   };
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        checkStaffByEmail(session.user.email);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        checkStaffByEmail(session.user.email);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
 
   // Check maintenance mode status
   useEffect(() => {
@@ -193,68 +171,19 @@ export default function AdminLayout() {
     checkMaintenance();
   }, []);
 
-  // STRICT: Check staff membership BY EMAIL ONLY from Staff Management table
-  const checkStaffByEmail = async (userEmail?: string | null) => {
-    if (!userEmail) {
-      // No email = NOT authorized for admin
-      setIsAuthorized(false);
-      setLoading(false);
-      navigate("/app/dashboard");
-      return;
-    }
-
-    // Query Staff Management table by email - SINGLE SOURCE OF TRUTH
-    const { data: staff, error } = await supabase
-      .from("staff")
-      .select(`id, user_id, status, role:admin_roles(name)`)
-      .eq("email", userEmail.toLowerCase())
-      .single();
-
-    if (error || !staff) {
-      // Email NOT in Staff Management = REDIRECT TO USER DASHBOARD
-      setIsAuthorized(false);
-      setLoading(false);
-      navigate("/app/dashboard");
-      return;
-    }
-
-    // Staff found - get role name (allow access even if pending, auto-activate)
-    const role = Array.isArray(staff.role) ? staff.role[0] : staff.role;
-    const roleName = (role as StaffRole)?.name || null;
-    
-    if (roleName) {
-      setStaffRoleName(roleName);
-      setIsCEO(roleName === "CEO");
-      setIsAuthorized(true);
-      
-      // Auto-activate if pending or link user_id if not set
-      if (staff.status !== 'active' || !staff.user_id) {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (currentUser) {
-          // Use SECURITY DEFINER function to auto-activate and link
-          await supabase.rpc('link_staff_account', {
-            _user_id: currentUser.id,
-            _user_email: userEmail
-          });
-        }
+  // ✅ Server-side validation - redirect if not staff
+  useEffect(() => {
+    if (user && !loading) {
+      if (!isStaff) {
+        navigate("/app/dashboard");
       }
-    } else {
-      setIsAuthorized(false);
-      navigate("/app/dashboard");
     }
-    
     setLoading(false);
-  };
+  }, [user, isStaff, loading, navigate]);
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+    const { signOut } = useAuth();
+    await signOut();
   };
 
   const switchToUser = () => {
@@ -262,8 +191,8 @@ export default function AdminLayout() {
   };
 
   const getAdminRoute = () => {
-    if (staffRoleName === 'CEO') return '/app/admin/ceo';
-    return roleNavigation[staffRoleName || '']?.[0]?.href || '/app/admin/ceo';
+    if (isAdmin) return '/app/admin/ceo';
+    return '/app/admin/ceo';
   };
 
   // Show loading while checking authorization
@@ -276,7 +205,7 @@ export default function AdminLayout() {
   }
 
   // SECURITY: If not authorized, don't render admin layout
-  if (!isAuthorized || !user) {
+  if (!isStaff || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -285,9 +214,9 @@ export default function AdminLayout() {
   }
 
   // Get navigation based on role
-  const navigation = isCEO 
+  const navigation = isAdmin 
     ? ceoNavigation 
-    : (staffRoleName ? roleNavigation[staffRoleName] || [] : []);
+    : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -336,7 +265,7 @@ export default function AdminLayout() {
 
           {!showCompactSidebar && (
             <div className="px-4 py-2 border-b border-border/30">
-              <p className="text-xs text-muted-foreground">{staffRoleName || 'Staff'} Panel</p>
+              <p className="text-xs text-muted-foreground">{isAdmin ? 'Admin' : 'Staff'} Panel</p>
             </div>
           )}
 
@@ -387,7 +316,7 @@ export default function AdminLayout() {
               <>
                 <RoleSwitcher
                   currentMode="admin"
-                  staffRoleName={staffRoleName}
+                  staffRoleName={isAdmin ? 'Admin' : 'Staff'}
                   isStaff={true}
                   onSwitchToUser={switchToUser}
                   onSwitchToAdmin={() => {}}
@@ -463,7 +392,7 @@ export default function AdminLayout() {
             <div className="flex items-center gap-2">
               <RoleSwitcher
                 currentMode="admin"
-                staffRoleName={staffRoleName}
+                staffRoleName={isAdmin ? 'Admin' : 'Staff'}
                 isStaff={true}
                 onSwitchToUser={switchToUser}
                 onSwitchToAdmin={() => {}}

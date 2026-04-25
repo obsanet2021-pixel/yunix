@@ -6,7 +6,7 @@
 -- (We'll update existing roles via separate insert)
 
 -- 2. Loyalty Progress Table - Track user loyalty cycles
-CREATE TABLE public.loyalty_progress (
+CREATE TABLE IF NOT EXISTS public.loyalty_progress (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   completed_orders integer NOT NULL DEFAULT 0,

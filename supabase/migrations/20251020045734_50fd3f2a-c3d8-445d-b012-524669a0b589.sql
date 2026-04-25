@@ -14,11 +14,13 @@ END;
 $$;
 
 -- Recreate triggers
+DROP TRIGGER IF EXISTS update_prop_firms_updated_at ON public.prop_firms;
 CREATE TRIGGER update_prop_firms_updated_at
   BEFORE UPDATE ON public.prop_firms
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_certificates_updated_at ON public.certificates;
 CREATE TRIGGER update_certificates_updated_at
   BEFORE UPDATE ON public.certificates
   FOR EACH ROW

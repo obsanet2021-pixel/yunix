@@ -1,5 +1,5 @@
 -- Create roles table for admin system
-CREATE TABLE public.admin_roles (
+CREATE TABLE IF NOT EXISTS public.admin_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL UNIQUE,
   description text,
@@ -20,7 +20,7 @@ CREATE TABLE public.admin_roles (
 );
 
 -- Create staff table
-CREATE TABLE public.staff (
+CREATE TABLE IF NOT EXISTS public.staff (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   name text NOT NULL,
@@ -70,13 +70,37 @@ AS $$
 $$;
 
 -- RLS Policies for admin_roles
-CREATE POLICY "Staff can view roles" ON public.admin_roles
-FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.staff WHERE user_id = auth.uid())
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE p.polname = 'Staff can view roles'
+      AND c.relname = 'admin_roles'
+      AND n.nspname = 'public'
+  ) THEN
+    CREATE POLICY "Staff can view roles" ON public.admin_roles
+    FOR SELECT USING (
+      EXISTS (SELECT 1 FROM public.staff WHERE user_id = auth.uid())
+    );
+  END IF;
 
-CREATE POLICY "CEO can manage roles" ON public.admin_roles
-FOR ALL USING (public.is_ceo(auth.uid()));
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE p.polname = 'CEO can manage roles'
+      AND c.relname = 'admin_roles'
+      AND n.nspname = 'public'
+  ) THEN
+    CREATE POLICY "CEO can manage roles" ON public.admin_roles
+    FOR ALL USING (public.is_ceo(auth.uid()));
+  END IF;
+END
+$$;
 
 -- RLS Policies for staff
 CREATE POLICY "Staff can view all staff" ON public.staff

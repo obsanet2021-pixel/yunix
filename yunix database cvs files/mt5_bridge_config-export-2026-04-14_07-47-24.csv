@@ -1,2 +1,0 @@
-id;bridge_url;bridge_api_key;is_active;sync_interval_minutes;last_global_sync_at;created_at;updated_at
-60e9d6f4-8f54-4b19-868b-39b4a6d596d7;https://gupyerzkzcpqdwbqoinh.supabase.co/functions/v1/mt5-sync;sb_publishable_mp1uQ4Je-0sJHsmEG9Rbvg_spjEeU86;true;20;2026-01-07 05:30:05.188+00;2026-01-02 11:12:36.186893+00;2026-01-07 05:30:05.20734+00

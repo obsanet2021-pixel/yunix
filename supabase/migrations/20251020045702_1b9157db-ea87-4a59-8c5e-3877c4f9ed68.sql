@@ -5,7 +5,7 @@ VALUES
   ('certificates', 'certificates', false, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 
 -- Create prop_firms table
-CREATE TABLE public.prop_firms (
+CREATE TABLE IF NOT EXISTS public.prop_firms (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE public.prop_firms (
 );
 
 -- Create certificates table
-CREATE TABLE public.certificates (
+CREATE TABLE IF NOT EXISTS public.certificates (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -36,44 +36,53 @@ CREATE TABLE public.certificates (
 );
 
 -- Enable RLS
-ALTER TABLE public.prop_firms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.certificates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.prop_firms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.certificates ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for prop_firms
+DROP POLICY IF EXISTS "Users can view their own prop firms" ON public.prop_firms;
 CREATE POLICY "Users can view their own prop firms"
   ON public.prop_firms FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own prop firms" ON public.prop_firms;
 CREATE POLICY "Users can create their own prop firms"
   ON public.prop_firms FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own prop firms" ON public.prop_firms;
 CREATE POLICY "Users can update their own prop firms"
   ON public.prop_firms FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own prop firms" ON public.prop_firms;
 CREATE POLICY "Users can delete their own prop firms"
   ON public.prop_firms FOR DELETE
   USING (auth.uid() = user_id);
 
 -- RLS Policies for certificates
+DROP POLICY IF EXISTS "Users can view their own certificates" ON public.certificates;
 CREATE POLICY "Users can view their own certificates"
   ON public.certificates FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create their own certificates" ON public.certificates;
 CREATE POLICY "Users can create their own certificates"
   ON public.certificates FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own certificates" ON public.certificates;
 CREATE POLICY "Users can update their own certificates"
   ON public.certificates FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own certificates" ON public.certificates;
 CREATE POLICY "Users can delete their own certificates"
   ON public.certificates FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Storage policies for prop-firm-screenshots
+DROP POLICY IF EXISTS "Users can upload their own screenshots" ON storage.objects;
 CREATE POLICY "Users can upload their own screenshots"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -81,6 +90,7 @@ CREATE POLICY "Users can upload their own screenshots"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can view their own screenshots" ON storage.objects;
 CREATE POLICY "Users can view their own screenshots"
   ON storage.objects FOR SELECT
   USING (
@@ -88,6 +98,7 @@ CREATE POLICY "Users can view their own screenshots"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can update their own screenshots" ON storage.objects;
 CREATE POLICY "Users can update their own screenshots"
   ON storage.objects FOR UPDATE
   USING (
@@ -95,6 +106,7 @@ CREATE POLICY "Users can update their own screenshots"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can delete their own screenshots" ON storage.objects;
 CREATE POLICY "Users can delete their own screenshots"
   ON storage.objects FOR DELETE
   USING (
@@ -103,6 +115,7 @@ CREATE POLICY "Users can delete their own screenshots"
   );
 
 -- Storage policies for certificates
+DROP POLICY IF EXISTS "Users can upload their own certificates" ON storage.objects;
 CREATE POLICY "Users can upload their own certificates"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -110,6 +123,7 @@ CREATE POLICY "Users can upload their own certificates"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can view their own certificates" ON storage.objects;
 CREATE POLICY "Users can view their own certificates"
   ON storage.objects FOR SELECT
   USING (
@@ -117,6 +131,7 @@ CREATE POLICY "Users can view their own certificates"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can update their own certificates" ON storage.objects;
 CREATE POLICY "Users can update their own certificates"
   ON storage.objects FOR UPDATE
   USING (
@@ -124,6 +139,7 @@ CREATE POLICY "Users can update their own certificates"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can delete their own certificates" ON storage.objects;
 CREATE POLICY "Users can delete their own certificates"
   ON storage.objects FOR DELETE
   USING (

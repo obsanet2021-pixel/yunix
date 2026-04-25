@@ -1,5 +1,5 @@
 -- Create plaque_orders table
-CREATE TABLE public.plaque_orders (
+CREATE TABLE IF NOT EXISTS public.plaque_orders (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   certificate_id UUID NOT NULL REFERENCES public.certificates(id) ON DELETE CASCADE,
@@ -20,30 +20,71 @@ CREATE TABLE public.plaque_orders (
 ALTER TABLE public.plaque_orders ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own orders
-CREATE POLICY "Users can view their own plaque orders"
-ON public.plaque_orders
-FOR SELECT
-USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE p.polname = 'Users can view their own plaque orders'
+      AND c.relname = 'plaque_orders'
+      AND n.nspname = 'public'
+  ) THEN
+    CREATE POLICY "Users can view their own plaque orders"
+    ON public.plaque_orders
+    FOR SELECT
+    USING (auth.uid() = user_id);
+  END IF;
 
--- Users can create their own orders
-CREATE POLICY "Users can create their own plaque orders"
-ON public.plaque_orders
-FOR INSERT
-WITH CHECK (auth.uid() = user_id);
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE p.polname = 'Users can create their own plaque orders'
+      AND c.relname = 'plaque_orders'
+      AND n.nspname = 'public'
+  ) THEN
+    CREATE POLICY "Users can create their own plaque orders"
+    ON public.plaque_orders
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+  END IF;
 
--- CEO can view all orders
-CREATE POLICY "CEO can view all plaque orders"
-ON public.plaque_orders
-FOR SELECT
-USING (is_ceo(auth.uid()));
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE p.polname = 'CEO can view all plaque orders'
+      AND c.relname = 'plaque_orders'
+      AND n.nspname = 'public'
+  ) THEN
+    CREATE POLICY "CEO can view all plaque orders"
+    ON public.plaque_orders
+    FOR SELECT
+    USING (is_ceo(auth.uid()));
+  END IF;
 
--- CEO can update orders
-CREATE POLICY "CEO can update plaque orders"
-ON public.plaque_orders
-FOR UPDATE
-USING (is_ceo(auth.uid()));
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_policy p
+    JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE p.polname = 'CEO can update plaque orders'
+      AND c.relname = 'plaque_orders'
+      AND n.nspname = 'public'
+  ) THEN
+    CREATE POLICY "CEO can update plaque orders"
+    ON public.plaque_orders
+    FOR UPDATE
+    USING (is_ceo(auth.uid()));
+  END IF;
+END
+$$;
 
--- Create trigger for updated_at
+DROP TRIGGER IF EXISTS update_plaque_orders_updated_at ON public.plaque_orders;
 CREATE TRIGGER update_plaque_orders_updated_at
 BEFORE UPDATE ON public.plaque_orders
 FOR EACH ROW

@@ -305,7 +305,7 @@ const handleOTPFlow = async (chatId: number, linkToken: string, username: string
   }
 
   // Send the OTP code
-  const message = otpMessage(otpRecord.otp_code, otpRecord.purpose);
+  const message = otpMessage(otpRecord.raw_otp_code, otpRecord.purpose);
   const result = await sendTelegramMessage(chatId, message, botToken);
 
   // Auto-delete OTP message after 5 minutes (test mode)
