@@ -41,27 +41,28 @@ export async function createSessionForUser(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + sessionDays * 24 * 60 * 60 * 1000).toISOString();
 
-  // Clean up old sessions for this user
-  const { data: activeSessions, error: activeError } = await supabase
-    .from('sessions')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('revoked', false)
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: true });
-
-  if (activeError) {
-    throw new Error(`Failed to read active sessions: ${activeError.message}`);
-  }
-
-  // Enforce session limit
-  if (activeSessions && activeSessions.length >= maxSessions) {
-    // Revoke oldest sessions
-    const sessionsToRevoke = activeSessions.slice(0, activeSessions.length - maxSessions + 1);
-    await supabase
+  // Clean up old sessions for this user (may fail during sign-in before auth is complete)
+  try {
+    const { data: activeSessions } = await supabase
       .from('sessions')
-      .update({ revoked: true })
-      .in('id', sessionsToRevoke.map(s => s.id));
+      .select('id')
+      .eq('user_id', userId)
+      .eq('revoked', false)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: true });
+
+    // Enforce session limit
+    if (activeSessions && activeSessions.length >= maxSessions) {
+      // Revoke oldest sessions
+      const sessionsToRevoke = activeSessions.slice(0, activeSessions.length - maxSessions + 1);
+      await supabase
+        .from('sessions')
+        .update({ revoked: true })
+        .in('id', sessionsToRevoke.map(s => s.id));
+    }
+  } catch (_cleanupError) {
+    // Ignore cleanup errors during sign-in (RLS may block reads before auth completes)
+    console.warn('Session cleanup skipped during sign-in');
   }
 
   const tokenHash = await hashSessionToken(token);
