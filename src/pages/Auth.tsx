@@ -988,15 +988,15 @@ export default function Auth() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center items-center h-full p-12 text-center">
-          <div className="max-w-md w-full">
-            <h1 className="font-display text-4xl lg:text-5xl font-extrabold mb-6">
+          <div className="max-w-md w-full mx-auto">
+            <h1 className="font-display text-4xl lg:text-5xl font-extrabold mb-6 text-center">
               <span className="bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent">
                 Start Trading
               </span>
               <br />
               With Real Clarity
             </h1>
-            <p className="text-lg text-muted-foreground mb-8 font-light">
+            <p className="text-lg text-muted-foreground mb-8 font-light text-center">
               Join over 100 traders who use YUNIX to track their edge, stay disciplined, and grow their accounts.
             </p>
           </div>
