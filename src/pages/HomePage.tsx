@@ -1,12 +1,13 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, ExternalLink, Play, Youtube, Send, Instagram } from "lucide-react";
+import { Video, ExternalLink, Play, Youtube, Send, Instagram, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import TikTokIcon from "@/components/icons/TikTokIcon";
 import YunixLogo from "@/components/YunixLogo";
+import MobileNavigation from "@/components/MobileNavigation";
 
 // Landing components
 import ScrollProgress from "@/components/landing/ScrollProgress";
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isScrolled, setIsScrolled] = useState(false);
   const [userCount, setUserCount] = useState(100);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -65,6 +67,33 @@ export default function HomePage() {
     const { count } = await supabase.from("profiles").select("*", { count: "exact", head: true });
     if (count !== null && count > 0) setUserCount(count);
   };
+
+  // Real-time subscription for user count
+  useEffect(() => {
+    const subscription = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          // Optimistic update: increment/decrement based on event
+          if (payload.eventType === 'INSERT') {
+            setUserCount(prev => prev + 1);
+          } else if (payload.eventType === 'DELETE') {
+            setUserCount(prev => Math.max(0, prev - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -104,11 +133,23 @@ export default function HomePage() {
             </nav>
             <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={() => navigate("/auth")} className="hidden sm:inline-flex focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Sign In</Button>
-              <Button onClick={() => navigate("/auth")} className="bg-primary hover:bg-primary/90 shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Get Started</Button>
+              <Button onClick={() => navigate("/auth")} className="hidden sm:inline-flex bg-primary hover:bg-primary/90 shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Get Started</Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden h-10 w-10 min-h-[44px] min-w-[44px]"
+                onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Mobile Navigation */}
+      <MobileNavigation isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
       {/* Scroll-based Narrative Sections with Snap */}
       <main id="main-content" className="scroll-snap-section">

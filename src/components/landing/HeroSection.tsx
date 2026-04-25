@@ -116,11 +116,25 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
         <ScrollReveal direction="up" delay={500} className="mt-16 lg:mt-24">
           <div className="relative max-w-5xl mx-auto">
             <div className="glow-card rounded-2xl overflow-hidden shadow-2xl">
-              <img 
-                src="/hero-screenshot-1.png" 
-                alt="YUNIX Trading Platform Dashboard"
-                className="w-full h-auto"
-              />
+              <picture>
+                <source
+                  srcSet="/hero-screenshot-1.png 1x"
+                  media="(min-width: 1024px)"
+                />
+                <source
+                  srcSet="/hero-screenshot-1.png 1x"
+                  media="(min-width: 640px)"
+                />
+                <img
+                  src="/hero-screenshot-1.png"
+                  alt="YUNIX Trading Platform Dashboard"
+                  className="w-full h-auto"
+                  loading="eager"
+                  fetchPriority="high"
+                  width="1920"
+                  height="1080"
+                />
+              </picture>
             </div>
           </div>
         </ScrollReveal>
