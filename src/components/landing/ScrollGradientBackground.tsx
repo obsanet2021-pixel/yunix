@@ -72,7 +72,7 @@ export default function ScrollGradientBackground({ className }: ScrollGradientBa
       />
 
       {/* Grid pattern overlay */}
-      <div 
+      <div
         className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03] will-change-transform"
         style={{
           backgroundImage: `
@@ -81,6 +81,16 @@ export default function ScrollGradientBackground({ className }: ScrollGradientBa
           `,
           backgroundSize: '60px 60px',
           transform: `translateY(${scrollProgress * -20}px) translateZ(0)`,
+        }}
+      />
+
+      {/* Noise texture overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04] pointer-events-none will-change-transform"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          mixBlendMode: 'overlay',
+          transform: `translateZ(0)`,
         }}
       />
     </div>
