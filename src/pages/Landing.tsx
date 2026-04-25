@@ -279,9 +279,9 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Platform */}
+            {/* Product */}
             <div>
-              <h4 className="font-semibold mb-4">Platform</h4>
+              <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-3">
                 <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link></li>
                 <li><Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Trade Journal</Link></li>
