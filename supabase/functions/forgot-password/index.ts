@@ -30,23 +30,58 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Check if user exists
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('id, telegram_chat_id')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+    // Check auth.users first (source of truth for registered emails)
+    let userId: string | undefined;
+    let telegramChatId: string | null = null;
 
-    console.log(`Password reset request for ${normalizedEmail}:`, {
-      userFound: !!user,
-      hasTelegram: !!user?.telegram_chat_id,
-      userError: userError?.message
-    });
+    try {
+      // Try admin API first (newer versions)
+      const { data: authData, error: authError } = await supabase.auth.admin.getUserByEmail(normalizedEmail);
+
+      console.log(`Auth lookup for ${normalizedEmail}:`, {
+        found: !!authData?.user,
+        error: authError?.message
+      });
+
+      userId = authData?.user?.id;
+    } catch (methodError) {
+      console.log('getUserByEmail not available, falling back to profiles lookup');
+    }
+
+    // Fallback: check profiles table directly
+    if (!userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, telegram_chat_id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (profile) {
+        userId = profile.id;
+        telegramChatId = profile.telegram_chat_id || null;
+      }
+    }
+
+    // If found in auth but not in profiles fallback, check profiles for Telegram
+    if (userId && !telegramChatId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('telegram_chat_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      telegramChatId = profile?.telegram_chat_id || null;
+
+      console.log(`Profile lookup:`, {
+        hasProfile: !!profile,
+        hasTelegram: !!telegramChatId
+      });
+    }
 
     // Generate challenge ID for OTP verification
     const challengeId = crypto.randomUUID();
 
-    if (user) {
+    if (userId) {
       // Try to send via Telegram OTP system first
       const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
       const telegramResponse = await fetch(`${supabaseUrl}/functions/v1/generate-telegram-otp`, {
@@ -91,7 +126,7 @@ serve(async (req: Request) => {
               .from('auth_challenges')
               .insert({
                 id: challengeId,
-                user_id: user.id,
+                user_id: userId,
                 email: normalizedEmail,
                 type: 'password_reset',
                 channel: 'telegram',
@@ -146,7 +181,7 @@ serve(async (req: Request) => {
         .from('auth_challenges')
         .insert({
           id: challengeId,
-          user_id: user.id,
+          user_id: userId,
           email: normalizedEmail,
           type: 'password_reset',
           channel: 'console',
