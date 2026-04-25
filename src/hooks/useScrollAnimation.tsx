@@ -72,24 +72,50 @@ export function useParallax(speed: number = 0.5): number {
 export function useCountUp(
   target: number,
   duration: number = 2000,
-  triggerRef: RefObject<Element>
+  triggerRef: RefObject<Element>,
+  options?: {
+    decimals?: number;
+    direction?: 'up' | 'down';
+    prefix?: string;
+    suffix?: string;
+    easing?: 'linear' | 'ease-out' | 'ease-in-out' | 'exponential';
+  }
 ): number {
   const [count, setCount] = useState(0);
   const isInView = useInView(triggerRef, { threshold: 0.3, triggerOnce: true });
   const hasAnimated = useRef(false);
+  const { decimals = 0, direction = 'up', prefix = '', suffix = '', easing = 'ease-out' } = options || {};
 
   useEffect(() => {
     if (!isInView || hasAnimated.current) return;
     hasAnimated.current = true;
 
     const startTime = performance.now();
+    const startValue = direction === 'down' ? target : 0;
+    const endValue = direction === 'down' ? 0 : target;
+
+    const getEasedProgress = (progress: number) => {
+      switch (easing) {
+        case 'linear':
+          return progress;
+        case 'ease-out':
+          return 1 - Math.pow(1 - progress, 3);
+        case 'ease-in-out':
+          return progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        case 'exponential':
+          return progress === 0 ? 0 : 1 - Math.pow(2, -10 * progress);
+        default:
+          return 1 - Math.pow(1 - progress, 3);
+      }
+    };
+
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
+      const eased = getEasedProgress(progress);
       
-      // Easing function (ease-out cubic)
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(target * eased));
+      const currentCount = startValue + (endValue - startValue) * eased;
+      setCount(currentCount);
 
       if (progress < 1) {
         requestAnimationFrame(animate);
@@ -97,7 +123,7 @@ export function useCountUp(
     };
 
     requestAnimationFrame(animate);
-  }, [isInView, target, duration]);
+  }, [isInView, target, duration, direction, decimals, prefix, suffix, easing]);
 
   return count;
 }

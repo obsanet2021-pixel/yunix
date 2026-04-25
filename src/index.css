@@ -173,12 +173,14 @@
   .glow-card {
     @apply relative rounded-2xl border border-border bg-card transition-all duration-300;
     box-shadow: var(--shadow-soft);
+    transform: translateZ(0); /* GPU acceleration */
+    will-change: transform, box-shadow;
   }
 
   .glow-card:hover {
     box-shadow: var(--shadow-glow), var(--shadow-elevated);
     border-color: hsl(var(--primary) / 0.3);
-    transform: translateY(-2px);
+    transform: translateY(-2px) translateZ(0);
   }
 
   /* Glass Effect Card */
@@ -187,11 +189,13 @@
     background: hsl(var(--glass-bg));
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    transform: translateZ(0); /* GPU acceleration */
+    will-change: transform, border-color;
   }
 
   .glass-card:hover {
     border-color: hsl(var(--primary) / 0.4);
-    transform: translateY(-2px);
+    transform: translateY(-2px) translateZ(0);
   }
 
   /* Premium Button Styling */
