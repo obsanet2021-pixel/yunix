@@ -33,7 +33,7 @@ interface MarketingStats {
 
 export default function MarketingDashboard() {
   const navigate = useNavigate();
-  const { staffData, loading: permLoading } = useStaffPermissions();
+  const { hasAccessToSection, isCEO, loading: permLoading } = useStaffPermissions();
   const [stats, setStats] = useState<MarketingStats>({
     totalUsers: 0,
     newUsersThisWeek: 0,
@@ -48,25 +48,19 @@ export default function MarketingDashboard() {
   const [loading, setLoading] = useState(true);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
 
-  const isCEO = staffData?.role?.name === 'CEO';
-  
-  const isMarketing = isCEO || staffData?.role?.permissions?.view_analytics || 
-    staffData?.role?.permissions?.view_social_media ||
-    staffData?.role?.name === 'Marketing Manager' || 
-    staffData?.role?.name === 'Marketing' ||
-    staffData?.role?.name === 'Marketing Agent';
+  const canAccess = isCEO || hasAccessToSection('staff/marketing');
 
   useEffect(() => {
-    if (!permLoading && !isMarketing) {
+    if (!permLoading && !canAccess) {
       navigate('/app/dashboard');
     }
-  }, [isMarketing, permLoading, navigate]);
+  }, [canAccess, permLoading, navigate]);
 
   useEffect(() => {
-    if (isMarketing) {
+    if (canAccess) {
       loadStats();
     }
-  }, [isMarketing]);
+  }, [canAccess]);
 
   const loadStats = async () => {
     try {
@@ -129,7 +123,7 @@ export default function MarketingDashboard() {
     );
   }
 
-  if (!isMarketing) {
+  if (!canAccess) {
     return null;
   }
 

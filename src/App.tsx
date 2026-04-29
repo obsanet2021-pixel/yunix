@@ -18,7 +18,6 @@ import PropFirmDetail from "./pages/PropFirmDetail";
 import Certificates from "./pages/Certificates";
 import EconomicCalendar from "./pages/EconomicCalendar";
 import AIChat from "./pages/AIChat";
-import TradePlanner from "./pages/TradePlanner";
 import Sessions from "./pages/Sessions";
 import Backtesting from "./pages/Backtesting";
 import BacktestSessions from "./pages/BacktestSessions";
@@ -75,6 +74,7 @@ import InvitationContest from "./pages/InvitationContest";
 import LoyaltyOperations from "./pages/admin/LoyaltyOperations";
 import PartnerOperations from "./pages/admin/PartnerOperations";
 import DiscountRules from "./pages/admin/DiscountRules";
+import Unauthorized from "./pages/Unauthorized";
 
 const queryClient = new QueryClient();
 
@@ -116,7 +116,6 @@ const AppContent = () => {
         <Route path="certificates" element={<Certificates />} />
         <Route path="calendar" element={<EconomicCalendar />} />
         <Route path="ai-chat" element={<AIChat />} />
-        <Route path="trade-planner" element={<TradePlanner />} />
         <Route path="sessions" element={<Sessions />} />
         <Route path="courses" element={<Courses />} />
         <Route path="courses/:slug" element={<CourseView />} />
@@ -168,6 +167,9 @@ const AppContent = () => {
         <Route path="staff/plaque-orders" element={<PlaqueOrdersDashboard />} />
         <Route path="staff/analytics" element={<AnalyticsDashboard />} />
       </Route>
+
+      {/* Unauthorized */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />

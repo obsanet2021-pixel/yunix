@@ -43,23 +43,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Error checking custom session:', error);
-      } finally {
-        setLoading(false);
       }
+      // Note: setLoading(false) is called once at the end of useEffect
     };
 
-    checkCustomSession();
-
     // ✅ CRITICAL ORDER: Subscribe FIRST, then fetch (Lovable's key insight)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
+
+      // Trigger daily check-in on sign-in or session restore
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        localStorage.setItem('trigger_daily_checkin', 'true');
+      }
     });
 
-    // THEN fetch existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Set loading false after both session checks complete
+    Promise.all([checkCustomSession(), supabase.auth.getSession()]).then(([_, { data: { session } }]) => {
       setSession(session);
       setUser(session?.user ?? null);
+    }).finally(() => {
       setLoading(false);
     });
 
@@ -75,7 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Create custom session
     const customToken = crypto.randomUUID();
     try {
-      const ipAddress = await fetchIP();
+      // Use 'unknown' as default IP to avoid blocking on external API
+      const ipAddress = 'unknown';
       await createSessionForUser(
         data.user.id,
         email,

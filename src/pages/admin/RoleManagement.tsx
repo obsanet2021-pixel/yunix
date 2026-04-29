@@ -87,20 +87,20 @@ const defaultPermissions: StaffPermissions = {
 export default function RoleManagement() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isCEO, hasPermission, loading: permLoading } = useStaffPermissions();
+  const { isCEO, hasAccessToSection, loading: permLoading } = useStaffPermissions();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  
+
   const [newRole, setNewRole] = useState({
     name: '',
     description: '',
     permissions: { ...defaultPermissions }
   });
 
-  const canAccess = isCEO || hasPermission('manage_roles');
+  const canAccess = isCEO || hasAccessToSection('role-management');
 
   useEffect(() => {
     if (!permLoading && !canAccess) {

@@ -1,0 +1,418 @@
+/* ============================================
+   YUNIX Invitation Contest - CSS Animations
+   ============================================ */
+
+/* CORE ANIMATIONS */
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.6);
+  }
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(168, 85, 247, 0.6);
+  }
+}
+
+/* UTILITY CLASSES */
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+.glow-text {
+  background: linear-gradient(90deg, #a855f7, #ec4899, #a855f7);
+  background-size: 200% center;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.card-glass {
+  background: rgba(15, 15, 35, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.1);
+}
+
+.card-glass-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-glass-hover:hover {
+  background: rgba(15, 15, 35, 0.9);
+  border-color: rgba(168, 85, 247, 0.3);
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.1);
+}
+
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.btn-glow:hover::before {
+  left: 100%;
+}
+
+.leaderboard-row {
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(168, 85, 247, 0.1);
+}
+
+.leaderboard-row:hover {
+  background: rgba(168, 85, 247, 0.1);
+  transform: translateX(4px);
+}
+
+.leaderboard-row.current-user {
+  background: rgba(168, 85, 247, 0.2);
+  border-left: 3px solid #a855f7;
+}
+
+.stat-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    transparent,
+    rgba(168, 85, 247, 0.1),
+    transparent
+  );
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* ============================================
+   ANIMATION TIMING VARIATIONS
+   ============================================ */
+
+/* Stagger animations for sequential reveals */
+.animate-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animate-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animate-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animate-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animate-delay-500 {
+  animation-delay: 0.5s;
+}
+
+.animate-delay-600 {
+  animation-delay: 0.6s;
+}
+
+/* Transition speeds */
+.transition-fast {
+  transition: all 0.2s ease-out;
+}
+
+.transition-normal {
+  transition: all 0.3s ease-out;
+}
+
+.transition-slow {
+  transition: all 0.5s ease-out;
+}
+
+/* ============================================
+   COLOR GRADIENT VARIATIONS
+   ============================================ */
+
+.gradient-purple {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+}
+
+.gradient-pink {
+  background: linear-gradient(135deg, #ec4899, #db2777);
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+/* ============================================
+   RESPONSIVE ANIMATIONS
+   ============================================ */
+
+/* Disable some animations on mobile for performance */
+@media (max-width: 640px) {
+  .particle {
+    animation-duration: 30s !important; /* Slower on mobile */
+  }
+
+  .stat-box::before {
+    animation: shimmer 4s ease-in-out infinite; /* Slower shimmer */
+  }
+}
+
+/* ============================================
+   DARK MODE ADJUSTMENTS
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .card-glass {
+    background: rgba(15, 15, 35, 0.8);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY - REDUCE MOTION
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   SCROLL ANIMATIONS (Optional)
+   ============================================ */
+
+/* For use with Intersection Observer */
+.scroll-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s ease-out;
+}
+
+.scroll-fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-scale-in {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.6s ease-out;
+}
+
+.scroll-scale-in.visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ============================================
+   CUSTOM HOVER EFFECTS
+   ============================================ */
+
+.hover-lift {
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.hover-glow {
+  transition: all 0.3s ease-out;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 1000px 100%;
+  animation: skeleton-loading 2s infinite;
+}
+
+/* ============================================
+   TEXT ANIMATIONS
+   ============================================ */
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.typing {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid #a855f7;
+  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+@keyframes blink-caret {
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: #a855f7;
+  }
+}
+
+/* ============================================
+   BACKGROUND ANIMATIONS
+   ============================================ */
+
+@keyframes background-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: background-shift 15s ease infinite;
+}
+
+/* ============================================
+   PERFORMANCE TIPS
+   ============================================ */
+
+/*
+Use will-change sparingly - only on elements that animate frequently:
+.will-animate {
+  will-change: transform, opacity;
+}
+
+Use transform instead of position for better performance:
+✅ transform: translateX(10px);
+❌ left: 10px;
+
+Use opacity instead of display for visibility:
+✅ opacity: 0;
+❌ display: none;
+*/
+
+/* ============================================
+   DEBUGGING - Uncomment to visualize
+   ============================================ */
+
+/*
+[class*="animate-"] {
+  border: 1px solid red !important;
+}
+
+.card-glass {
+  border: 1px solid blue !important;
+}
+*/

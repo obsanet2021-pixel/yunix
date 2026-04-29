@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Sun, Brain, Target, ChevronRight, ChevronLeft, Sparkles } from "lucide-react";
+import { buildCheckinContext } from "@/lib/traderContext";
 
 const MOODS = [
   { value: "calm", label: "Calm", emoji: "😌" },
@@ -58,24 +59,36 @@ export default function DailyCheckinModal({ open, onClose }: DailyCheckinModalPr
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error("CHECKIN_INSERT_ERROR", { error: "No authenticated user" });
+        throw new Error("User not authenticated");
+      }
 
-      // Get AI motivational response
-      let aiMsg = "";
-      try {
-        const res = await supabase.functions.invoke("chat", {
-          body: {
-            stream: false,
-            messages: [{
-              role: "user",
-              content: `I'm checking in for today. Mood: ${mood}, Confidence: ${confidence}/10, Stress: ${stress}/10, Sleep: ${sleepQuality}. My plan: ${tradingPlan || "Not set yet"}. Pairs: ${plannedPairs.join(", ") || "None"}. Risk limit: ${dailyRiskLimit}%. Max trades: ${maxTrades}. Give me a short 2-3 sentence motivational response to start my trading day.`
-            }]
-          }
-        });
-        aiMsg = res.data?.response || "";
-      } catch { /* AI response is optional */ }
+      // Validate required fields
+      if (!mood || !sleepQuality) {
+        console.error("CHECKIN_INSERT_ERROR", { error: "Missing required fields", payload: { mood, sleepQuality } });
+        toast({ title: "Validation Error", description: "Please complete all required fields", variant: "destructive" });
+        return;
+      }
 
-      const { error } = await supabase.from("daily_checkins").insert({
+      // Prevent duplicate check-ins
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data: existing } = await supabase
+        .from("daily_checkins")
+        .select("id")
+        .eq("user_id", user.id)
+        .gte("created_at", today.toISOString())
+        .maybeSingle();
+
+      if (existing) {
+        toast({ title: "Already checked in today!", description: "Come back tomorrow.", variant: "destructive" });
+        onClose();
+        return;
+      }
+
+      // Insert check-in data first (without AI response)
+      const { data: insertData, error: insertError } = await supabase.from("daily_checkins").insert({
         user_id: user.id,
         mood,
         confidence_level: confidence,
@@ -85,20 +98,55 @@ export default function DailyCheckinModal({ open, onClose }: DailyCheckinModalPr
         planned_pairs: plannedPairs,
         daily_risk_limit: dailyRiskLimit,
         max_trades: maxTrades,
-        ai_response: aiMsg,
-      });
+        ai_response: null, // Will be updated asynchronously
+      }).select().single();
 
-      if (error) throw error;
+      if (insertError) {
+        console.error("CHECKIN_INSERT_ERROR", { error: insertError, payload: { user_id: user.id, mood, sleepQuality } });
+        throw insertError;
+      }
 
-      setAiResponse(aiMsg);
-      if (aiMsg) {
-        setStep(totalSteps); // Show AI response step
-      } else {
-        toast({ title: "Check-in saved! ✅", description: "Have a great trading day!" });
-        onClose();
+      // Show success immediately
+      toast({ title: "Check-in saved! ✅", description: "Have a great trading day!" });
+
+      // Generate AI response asynchronously (non-blocking)
+      try {
+        // Build context from recent trades
+        const traderContext = await buildCheckinContext(user.id);
+
+        const res = await supabase.functions.invoke("daily-checkin-ai", {
+          body: {
+            mood,
+            confidence_level: confidence,
+            stress_level: stress,
+            sleep_quality: sleepQuality,
+            trading_plan: tradingPlan,
+            planned_pairs: plannedPairs,
+            daily_risk_limit: dailyRiskLimit,
+            max_trades: maxTrades,
+            yesterday_pnl: traderContext.includes('YESTERDAY') ? 0 : undefined, // Let AI handle if not in context
+            recent_trades_summary: traderContext.includes('RECENT TRADES') ? traderContext.split('RECENT TRADES:')[1] : undefined,
+          }
+        });
+
+        const aiMsg = res.data?.message || "";
+
+        // Update record with AI response if we got one
+        if (aiMsg && insertData?.id) {
+          await supabase.from("daily_checkins").update({ ai_response: aiMsg }).eq("id", insertData.id);
+        }
+
+        // Always show the final step, with fallback message
+        setAiResponse(aiMsg || "Great mindset! Stay disciplined, follow your plan, and trust your process today. 🚀");
+        setStep(totalSteps);
+      } catch (aiError) {
+        console.error("AI_GENERATION_ERROR", { error: aiError, inputData: { mood, confidence, stress, sleepQuality } });
+        // Show final step with fallback instead of closing
+        setAiResponse("Great mindset! Stay disciplined, follow your plan, and trust your process today. 🚀");
+        setStep(totalSteps);
       }
     } catch (error) {
-      console.error("Check-in error:", error);
+      console.error("CHECKIN_INSERT_ERROR", { error });
       toast({ title: "Error", description: "Could not save check-in", variant: "destructive" });
     } finally {
       setSaving(false);

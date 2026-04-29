@@ -67,7 +67,7 @@ export default function CEOBotManagement() {
     navigator.clipboard.writeText(WEBHOOK_URL);
     setCopied(true);
     toast.success('Webhook URL copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1000);
   };
 
   const handleCopyLinkCode = () => {

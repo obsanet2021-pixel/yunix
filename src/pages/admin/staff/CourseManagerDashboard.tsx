@@ -65,7 +65,7 @@ interface FinalCertificate {
 
 export default function CourseManagerDashboard() {
   const navigate = useNavigate();
-  const { loading, hasPermission, isCEO } = useStaffPermissions();
+  const { loading, hasAccessToSection, isCEO } = useStaffPermissions();
   const { toast } = useToast();
   
   const [courses, setCourses] = useState<Course[]>([]);
@@ -101,7 +101,7 @@ export default function CourseManagerDashboard() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && (hasPermission('manage_courses') || isCEO)) {
+    if (!loading && (hasAccessToSection('staff/course-manager') || isCEO)) {
       fetchCourses();
       fetchStudentProgress();
       fetchCertificates();
@@ -485,7 +485,7 @@ export default function CourseManagerDashboard() {
     );
   }
 
-  if (!hasPermission('manage_courses') && !isCEO) {
+  if (!hasAccessToSection('staff/course-manager') && !isCEO) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <p className="text-muted-foreground">You don't have permission to access this page.</p>

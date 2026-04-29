@@ -117,7 +117,8 @@ serve(async (req) => {
         purpose: purpose,
         expires_at: expiresAt,
         used: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        link_token: crypto.randomUUID()
       });
 
       if (insertError) {
@@ -209,7 +210,8 @@ serve(async (req) => {
       purpose: 'password_reset',
       expires_at: expiresAt,
       used: false,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      link_token: crypto.randomUUID()
     });
 
     if (insertError) {
@@ -246,7 +248,11 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message_id: String(telegramBody.result?.message_id ?? '') }),
+      JSON.stringify({ 
+        success: true, 
+        data: { action: 'OTP_SENT', delivery: 'telegram', message_id: String(telegramBody.result?.message_id ?? '') },
+        message: 'OTP sent to Telegram'
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

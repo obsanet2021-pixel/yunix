@@ -103,42 +103,118 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get user email
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', challenge.user_id)
-      .single();
+    // Check if this is a new user (from challenge metadata)
+    const isNewUser = challenge.metadata?.isNewUser || challenge.user_id?.startsWith('pending_');
+    const userEmail = challenge.email;
+    let userId = challenge.user_id;
+    let sessionToken: string | null = null;
 
-    if (profileError || !userProfile) {
-      return new Response(
-        JSON.stringify({ error: 'User profile not found' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (isNewUser) {
+      // Create new user with a random temporary password
+      const tempPassword = crypto.randomUUID();
+      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        email: userEmail,
+        password: tempPassword,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          source: 'passwordless_signup',
+          created_via: 'otp_verification'
+        }
+      });
+
+      if (createError) {
+        console.error('Error creating user:', createError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user account' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!newUser.user) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user account' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      userId = newUser.user.id;
+      console.log(`Created new user: ${userId} for ${userEmail}`);
+
+      // Create profile entry
+      await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: userEmail,
+          created_at: new Date().toISOString()
+        });
+
+      // Generate a session for immediate login
+      const { data: signInData, error: signInError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userEmail
+      });
+
+      if (signInError) {
+        console.error('Error generating sign-in link:', signInError);
+        // Fall back to recovery token
+        const { data: resetData } = await supabase.auth.admin.generateLink({
+          type: 'recovery',
+          email: userEmail
+        });
+        sessionToken = resetData.properties?.access_token || null;
+      } else {
+        sessionToken = signInData.properties?.access_token || null;
+      }
+    } else {
+      // Existing user flow
+      // Get user email from profiles
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !userProfile) {
+        return new Response(
+          JSON.stringify({ error: 'User profile not found' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Generate recovery token for password reset / login
+      const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: userProfile.email
+      });
+
+      if (resetError) {
+        console.error('Error generating recovery link:', resetError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate recovery token' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      sessionToken = resetData.properties?.access_token || null;
     }
 
-    // Generate recovery token
-    const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email: userProfile.email
-    });
-
-    if (resetError) {
-      console.error('Error generating recovery link:', resetError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate recovery token' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Delete used challenge only after successful token generation
+    // Delete used challenge after successful processing
     await supabase.from('auth_challenges').delete().eq('id', challengeId);
+
+    // Also mark any telegram_otp entries as used
+    await supabase
+      .from('telegram_otp')
+      .update({ used: true })
+      .eq('email', userEmail)
+      .eq('purpose', 'password_reset');
 
     return new Response(
       JSON.stringify({
         success: true,
-        recoveryToken: resetData.properties?.access_token,
-        message: 'Verification successful'
+        recoveryToken: sessionToken,
+        isNewUser: isNewUser,
+        message: isNewUser ? 'Account created successfully' : 'Verification successful'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

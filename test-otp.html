@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OTP Test</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; }
+        .result { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; white-space: pre-wrap; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        input { padding: 8px; width: 100%; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Telegram OTP Test</h1>
+    
+    <label>Email:</label>
+    <input type="email" id="email" value="obsanet2021@gmail.com" />
+    
+    <button onclick="testGenerateOtp()">Test generate-telegram-otp</button>
+    <button onclick="testForgotPassword()">Test forgot-password</button>
+    <button onclick="testDirectSend()">Test Direct Telegram Send</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://ounphbavkyrmotskydto.supabase.co';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91bnBoYmF2a3lybW90c2t5ZHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzOTYxNjAsImV4cCI6MjA1NTk3MjE2MH0.KwyRLr4hGfdKphUlFWiE5bQwo0OZRgMvoYaoV3bGj0s';
+        
+        function showResult(title, data, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'result ' + (isError ? 'error' : 'success');
+            div.innerHTML = `<strong>${title}</strong><br>${JSON.stringify(data, null, 2)}`;
+            document.getElementById('results').prepend(div);
+        }
+        
+        async function testGenerateOtp() {
+            const email = document.getElementById('email').value;
+            showResult('Testing generate-telegram-otp...', { email }, false);
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-telegram-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    },
+                    body: JSON.stringify({ email, purpose: 'password_reset' })
+                });
+                
+                const data = await response.json();
+                showResult('generate-telegram-otp Result', data, !data.success);
+            } catch (err) {
+                showResult('generate-telegram-otp Error', err.message, true);
+            }
+        }
+        
+        async function testForgotPassword() {
+            const email = document.getElementById('email').value;
+            showResult('Testing forgot-password...', { email }, false);
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/forgot-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                showResult('forgot-password Result', data, !data.success);
+            } catch (err) {
+                showResult('forgot-password Error', err.message, true);
+            }
+        }
+        
+        async function testDirectSend() {
+            const email = document.getElementById('email').value;
+            showResult('Testing direct Telegram send...', { email }, false);
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/test-telegram`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    },
+                    body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                showResult('test-telegram Result', data, !data.success);
+            } catch (err) {
+                showResult('test-telegram Error', err.message, true);
+            }
+        }
+    </script>
+</body>
+</html>

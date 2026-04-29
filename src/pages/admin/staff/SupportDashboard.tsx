@@ -57,7 +57,7 @@ interface SupportTemplate {
 export default function SupportDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { staffData, isCEO, hasPermission, loading: permLoading } = useStaffPermissions();
+  const { staffData, isCEO, hasAccessToSection, loading: permLoading } = useStaffPermissions();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
@@ -68,11 +68,11 @@ export default function SupportDashboard() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const isSupport = staffData?.role?.name === 'Support' || 
+  const isSupport = staffData?.role?.name === 'Support' ||
     staffData?.role?.name === 'Support Specialist' ||
-    staffData?.role?.name === 'QA & Support' || 
+    staffData?.role?.name === 'QA & Support' ||
     isCEO ||
-    hasPermission('manage_support');
+    hasAccessToSection('staff/support');
 
   useEffect(() => {
     if (!permLoading && !isSupport) {

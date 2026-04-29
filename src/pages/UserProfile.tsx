@@ -179,140 +179,141 @@ export default function UserProfile() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="px-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">My Profile</h1>
         <p className="text-muted-foreground">Manage your profile information</p>
       </div>
 
-      <Card className="glow-card">
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar Section */}
-          <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={profile?.avatar_url || ""} />
-              <AvatarFallback className="text-2xl">
-                {formData.name?.[0]?.toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-2">
-              <Label htmlFor="avatar" className="cursor-pointer">
-                <div className="flex items-center gap-2 text-sm text-primary hover:underline">
-                  <Upload className="h-4 w-4" />
-                  Upload Avatar
+      {/* Main Grid: Profile Settings and Bridge Settings */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="glow-card">
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Avatar Section */}
+            <div className="flex items-center gap-6">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarFallback className="text-2xl">
+                  {formData.name?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <Label htmlFor="avatar" className="cursor-pointer">
+                  <div className="flex items-center gap-2 text-sm text-primary hover:underline">
+                    <Upload className="h-4 w-4" />
+                    Upload Avatar
+                  </div>
+                </Label>
+                <Input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG or GIF. Max size 2MB.
+                </p>
+              </div>
+            </div>
+
+            {/* Profile Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Display Name</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Your name"
+                    className="pl-10"
+                  />
                 </div>
-              </Label>
-              <Input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={uploading}
-                className="hidden"
-              />
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG or GIF. Max size 2MB.
-              </p>
-            </div>
-          </div>
+              </div>
 
-          {/* Profile Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Display Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Your name"
-                  className="pl-10"
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="your@email.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  placeholder="Tell us about yourself..."
+                  rows={4}
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your@email.com"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Tell us about yourself..."
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="account_type">Account Type</Label>
-              <div className="flex items-center gap-2">
-                <Award className="h-4 w-4 text-muted-foreground" />
-                <Select
-                  value={formData.account_type}
-                  onValueChange={(value) => setFormData({ ...formData, account_type: value as typeof formData.account_type })}
-                >
-                  <SelectTrigger id="account_type" className="flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACCOUNT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        <div className="flex items-center gap-2">
-                          {type}
-                          <Badge variant={
-                            type === 'Funded' ? 'default' : 
-                            type === 'Evaluation' ? 'secondary' : 
-                            'outline'
-                          } className="ml-2">
+              <div className="space-y-2">
+                <Label htmlFor="account_type">Account Type</Label>
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-muted-foreground" />
+                  <Select
+                    value={formData.account_type}
+                    onValueChange={(value) => setFormData({ ...formData, account_type: value as typeof formData.account_type })}
+                  >
+                    <SelectTrigger id="account_type" className="flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACCOUNT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          <div className="flex items-center gap-2">
                             {type}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                            <Badge variant={
+                              type === 'Funded' ? 'default' : 
+                              type === 'Evaluation' ? 'secondary' : 
+                              'outline'
+                            } className="ml-2">
+                              {type}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Your current account status: <Badge variant={
+                    formData.account_type === 'Funded' ? 'default' : 
+                    formData.account_type === 'Evaluation' ? 'secondary' : 
+                    'outline'
+                  } className="ml-1">{formData.account_type}</Badge>
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Your current account status: <Badge variant={
-                  formData.account_type === 'Funded' ? 'default' : 
-                  formData.account_type === 'Evaluation' ? 'secondary' : 
-                  'outline'
-                } className="ml-1">{formData.account_type}</Badge>
-              </p>
-            </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Saving..." : "Save Changes"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      {/* Bridge Settings Section */}
-      {(isEnabled('bridge_settings') || isEnabled('activity_log')) && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {isEnabled('bridge_settings') && <BridgeSettingsCard />}
-          {isEnabled('activity_log') && <BridgeActivityLog />}
-        </div>
-      )}
+        {/* Bridge Settings Card */}
+        {isEnabled('bridge_settings') && <BridgeSettingsCard />}
+      </div>
+
+      {/* Activity Log - Full Width Below */}
+      {isEnabled('activity_log') && <BridgeActivityLog />}
     </div>
   );
 }

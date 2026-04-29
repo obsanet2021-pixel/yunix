@@ -15,7 +15,7 @@ export default function DashboardMockup() {
             <div className="w-3 h-3 rounded-full bg-green-500" />
           </div>
           <div className="flex-1 bg-muted/50 rounded-md px-3 py-1.5 text-center">
-            <span className="text-xs font-mono text-muted-foreground">app.yunix.io/dashboard</span>
+            <span className="text-xs font-mono text-muted-foreground">yunixofficial.com/app/dashboard</span>
           </div>
         </div>
 

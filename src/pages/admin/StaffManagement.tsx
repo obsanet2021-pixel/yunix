@@ -41,14 +41,14 @@ interface Staff {
 export default function StaffManagement() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isCEO, hasPermission, loading: permLoading } = useStaffPermissions();
+  const { isCEO, hasAccessToSection, staffRoleName, loading: permLoading } = useStaffPermissions();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-  
+
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
@@ -57,7 +57,7 @@ export default function StaffManagement() {
   const [sendEmail, setSendEmail] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
-  const canAccess = isCEO || hasPermission('manage_users');
+  const canAccess = isCEO || hasAccessToSection('staff-management');
 
   useEffect(() => {
     if (!permLoading && !canAccess) {

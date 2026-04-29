@@ -8,7 +8,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { 
   LayoutDashboard, BookOpen, MessageSquare, Clock, TrendingUp, Award, 
   Calendar, Menu, X, LogOut, Sun, Moon, Activity, UserCog, HelpCircle, Send, Package,
-  ChevronLeft, ChevronRight, Gift, Users, Settings, Calculator, Camera, Plus, Wallet, BarChart3, Building2
+  ChevronLeft, ChevronRight, Gift, Users, Settings, Calculator, Camera, Plus, Wallet, BarChart3, Building2,
+  Shield, Trophy
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "./ui/button";
@@ -17,7 +18,6 @@ import { useTheme } from "./ThemeProvider";
 
 import MaintenancePage from "@/pages/MaintenancePage";
 import YunixLogo from "./YunixLogo";
-import RoleSwitcher from "./RoleSwitcher";
 
 // Telegram bot button expires 24 hours from deployment (Dec 19, 2025 ~11:00 UTC)
 const TELEGRAM_BUTTON_EXPIRY = new Date('2025-12-19T11:00:00Z').getTime();
@@ -33,7 +33,6 @@ const userNavigation = [
   { name: "Certificates", href: "/app/certificates", icon: Award },
   { name: "Economic Calendar", href: "/app/calendar", icon: Calendar },
   { name: "AI Assistant", href: "/app/ai-chat", icon: MessageSquare },
-  { name: "Trade Planner", href: "/app/trade-planner", icon: Calculator },
   { name: "Sessions", href: "/app/sessions", icon: Clock },
   { name: "Courses", href: "/app/courses", icon: BookOpen },
 ];
@@ -42,6 +41,7 @@ const userNavigation = [
 const rewardsNavigation = [
   { name: "Loyalty Rewards", href: "/app/loyalty", icon: Gift },
   { name: "Partner Program", href: "/app/partners", icon: Users },
+  { name: "Invitation Contest", href: "/app/contest", icon: Trophy },
 ];
 
 const roleRoutes: Record<string, string> = {
@@ -72,7 +72,7 @@ export default function UserLayout() {
   const { theme, setTheme } = useTheme();
   const { isEnabled } = useFeatureToggles();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { isStaff } = useStaffPermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -97,6 +97,7 @@ export default function UserLayout() {
   const filteredRewardsNavigation = rewardsNavigation.filter(item => {
     if (item.href === '/app/loyalty') return isEnabled('loyalty_program');
     if (item.href === '/app/partners') return isEnabled('partner_program');
+    if (item.href === '/app/contest') return isEnabled('invitation_contest');
     return true;
   });
   
@@ -120,16 +121,17 @@ export default function UserLayout() {
   // Check maintenance mode
   useEffect(() => {
     const checkMaintenance = async () => {
-      const { data } = await supabase
+      const result = await supabase
         .from('system_settings')
         .select('value')
         .eq('key', 'maintenance_mode')
         .single();
-      
+
+      const data = result.data as unknown as { value: { enabled: boolean; message: string } | null } | null;
+
       if (data?.value) {
-        const value = data.value as { enabled: boolean; message: string };
-        setMaintenanceMode(value.enabled || false);
-        setMaintenanceMessage(value.message || '');
+        setMaintenanceMode(data.value.enabled || false);
+        setMaintenanceMessage(data.value.message || '');
       }
       setCheckingMaintenance(false);
     };
@@ -137,7 +139,6 @@ export default function UserLayout() {
   }, []);
 
   const handleSignOut = async () => {
-    const { signOut } = useAuth();
     await signOut();
   };
 
@@ -304,16 +305,16 @@ export default function UserLayout() {
               {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
             
-            {/* Role Switcher - ONLY for staff members */}
+            {/* Admin Switch Button - ONLY for staff members */}
             {!sidebarCollapsed && isStaff ? (
-              <RoleSwitcher
-                currentMode="user"
-                staffRoleName="Staff"
-                isStaff={isStaff}
-                onSwitchToUser={() => {}}
-                onSwitchToAdmin={switchToAdmin}
-                onSignOut={handleSignOut}
-              />
+              <Button
+                variant="ghost"
+                onClick={switchToAdmin}
+                className="w-full justify-start text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10 rounded-xl"
+              >
+                <Shield className="mr-3 h-5 w-5" />
+                Switch to Admin
+              </Button>
             ) : !sidebarCollapsed ? (
               <Button 
                 variant="ghost" 

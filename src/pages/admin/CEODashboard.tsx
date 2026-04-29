@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useStaffPermissions } from '@/hooks/useStaffPermissions';
 import { useFeatureToggles } from '@/hooks/useFeatureToggles';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +43,7 @@ interface DashboardStats {
 export default function CEODashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { isCEO, loading: permLoading } = useStaffPermissions();
   const { toggles, updateToggles, loading: togglesLoading } = useFeatureToggles();
   const [stats, setStats] = useState<DashboardStats>({
@@ -70,9 +72,9 @@ export default function CEODashboard() {
 
   useEffect(() => {
     if (!permLoading && !isCEO) {
-      navigate('/app/dashboard');
+      navigate('/unauthorized', { state: { from: location } });
     }
-  }, [isCEO, permLoading, navigate]);
+  }, [isCEO, permLoading, navigate, location]);
 
   useEffect(() => {
     loadStats();
@@ -94,7 +96,7 @@ export default function CEODashboard() {
         totalStaff: staffData.length,
         totalMembers: profilesData.length,
         totalRevenue: 0,
-        pendingInvoices: plaqueData.filter(p => p.status === 'Pending').length
+        pendingInvoices: plaqueData.filter((p: any) => p.status === 'Pending').length
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -112,7 +114,7 @@ export default function CEODashboard() {
   }
 
   if (!isCEO) {
-    return null;
+    return <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 
   const statCards = [

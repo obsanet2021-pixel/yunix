@@ -123,7 +123,7 @@ export default function Partners() {
     navigator.clipboard.writeText(link);
     setCopied(true);
     toast({ title: "Copied! 📋", description: "Referral link copied to clipboard." });
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1000);
   };
 
   const threshold = (rules.affiliate_conversion_threshold as number) || 3;

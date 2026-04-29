@@ -35,7 +35,7 @@ interface QAStats {
 
 export default function QADashboard() {
   const navigate = useNavigate();
-  const { staffData, loading: permLoading } = useStaffPermissions();
+  const { hasAccessToSection, isCEO, loading: permLoading } = useStaffPermissions();
   const [stats, setStats] = useState<QAStats>({
     totalCourses: 0,
     publishedCourses: 0,
@@ -51,21 +51,19 @@ export default function QADashboard() {
   const [loading, setLoading] = useState(true);
   const [qualityIssues, setQualityIssues] = useState<any[]>([]);
 
-  const isQA = staffData?.role?.name === 'QA Specialist' || 
-    staffData?.role?.name === 'QA & Support' || 
-    staffData?.role?.name === 'CEO';
+  const canAccess = isCEO || hasAccessToSection('staff/qa');
 
   useEffect(() => {
-    if (!permLoading && !isQA) {
+    if (!permLoading && !canAccess) {
       navigate('/app/dashboard');
     }
-  }, [isQA, permLoading, navigate]);
+  }, [canAccess, permLoading, navigate]);
 
   useEffect(() => {
-    if (isQA) {
+    if (canAccess) {
       loadStats();
     }
-  }, [isQA]);
+  }, [canAccess]);
 
   const loadStats = async () => {
     try {
@@ -156,7 +154,7 @@ export default function QADashboard() {
     );
   }
 
-  if (!isQA) {
+  if (!canAccess) {
     return null;
   }
 

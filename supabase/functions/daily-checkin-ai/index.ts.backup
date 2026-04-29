@@ -1,0 +1,90 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  callGemini,
+  safeHandler,
+  jsonResp,
+  type GeminiContent,
+} from "../shared/gemini.ts";
+
+serve(safeHandler(async (req) => {
+  const {
+    mood,
+    confidence,
+    stress,
+    sleepQuality,
+    tradingPlan,
+    plannedPairs,
+    dailyRiskLimit,
+    maxTrades,
+    yesterdayPnl,
+    recentTradesSummary,
+  } = await req.json();
+
+  const systemInstruction = `You are YUNIX's Daily Check-in Coach — a warm, perceptive trading psychology mentor who knows this trader's data.
+
+YOUR IDENTITY:
+- You are NOT a generic motivational speaker. You are a trading-specific coach who references actual data.
+- You speak in 2-3 sentences maximum. Every word must earn its place.
+- You are warm but never corny. Honest but never harsh.
+
+YOUR RULES:
+1. REFERENCE the trader's actual check-in values (mood, sleep, stress, confidence) — don't ignore them.
+2. If yesterday was a loss (yesterdayPnl < 0): Acknowledge it briefly, then pivot to discipline and process. Never dwell.
+3. If on a winning streak (recent wins): Warn about overconfidence gently. "The market humbles the overconfident."
+4. If stress is high or sleep is poor: Prioritize self-care over trading aggression. Suggest fewer trades or smaller size.
+5. If confidence is very high but stress is also high: Flag the combo — this often leads to impulsive decisions.
+6. END with ONE concrete intention for today's session. Not vague — specific. E.g., "Today, I'll wait for my London setup only" or "I'm capping at 3 trades max today."
+
+COMMUNICATION STYLE:
+- Use 1-2 emojis max per response. Not every sentence.
+- Be direct. No fluff, no filler phrases like "I see that" or "It sounds like."
+- Vary your sentence structure — don't always start the same way.
+- Match the trader's energy: if they're low, lift them. If they're hyped, ground them.
+
+FORBIDDEN:
+- Never say "Remember, trading is a marathon" or any cliché.
+- Never use more than 3 sentences.
+- Never give financial advice or specific trade calls.
+- Never ignore the data provided — always weave it in.`;
+
+  // Build injected data sections
+  const dataSections: string[] = [];
+
+  dataSections.push(`CHECK-IN DATA:
+- Mood: ${mood || "not provided"}
+- Confidence: ${confidence !== undefined ? `${confidence}/10` : "not provided"}
+- Stress: ${stress !== undefined ? `${stress}/10` : "not provided"}
+- Sleep Quality: ${sleepQuality || "not provided"}`);
+
+  if (tradingPlan) {
+    dataSections.push(`TRADING PLAN: ${tradingPlan}`);
+  }
+  if (plannedPairs && plannedPairs.length > 0) {
+    dataSections.push(`PLANNED PAIRS: ${plannedPairs.join(", ")}`);
+  }
+  if (dailyRiskLimit !== undefined) {
+    dataSections.push(`DAILY RISK LIMIT: ${dailyRiskLimit}%`);
+  }
+  if (maxTrades !== undefined) {
+    dataSections.push(`MAX TRADES TODAY: ${maxTrades}`);
+  }
+  if (yesterdayPnl !== undefined) {
+    dataSections.push(`YESTERDAY'S P&L: $${yesterdayPnl}${yesterdayPnl < 0 ? " (loss day)" : yesterdayPnl > 0 ? " (win day)" : " (breakeven)"}`);
+  }
+  if (recentTradesSummary) {
+    dataSections.push(`RECENT TRADES SUMMARY:\n${recentTradesSummary}`);
+  }
+
+  const userText = `Here's my daily check-in. Give me my coaching response.\n\n${dataSections.join("\n\n")}`;
+
+  const contents: GeminiContent[] = [
+    { role: "user", parts: [{ text: userText }] },
+  ];
+
+  const message = await callGemini(contents, {
+    systemInstruction,
+    generationConfig: { temperature: 0.7, maxOutputTokens: 256 },
+  });
+
+  return jsonResp({ message: message || "Stay focused and trade your plan today. 💪" });
+}));

@@ -147,6 +147,69 @@
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   }
+
+  .light {
+    /* Light Theme */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 24 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 24 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 24 91% 60%;
+
+    /* Chart Colors */
+    --chart-1: 24 91% 60%;
+    --chart-2: 201 89% 56%;
+    --chart-3: 158 64% 52%;
+    --chart-4: 348 83% 47%;
+    --chart-5: 45 93% 47%;
+
+    /* Success/Error Colors */
+    --success: 158 64% 52%;
+    --success-foreground: 0 0% 100%;
+
+    /* Premium Light Effects */
+    --glass-bg: 0 0% 100% / 0.8;
+    --glass-border: 214 32% 91%;
+    --shadow-glow: 0 4px 30px -4px hsl(24 91% 60% / 0.25);
+    --shadow-soft: 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-elevated: 0 10px 40px -10px hsl(0 0% 0% / 0.15);
+    --gradient-primary: linear-gradient(135deg, hsl(24 91% 60%), hsl(16 91% 56%));
+    --gradient-hero: linear-gradient(135deg, hsl(24 91% 60% / 0.1), hsl(16 91% 56% / 0.1));
+
+    /* Sidebar */
+    --sidebar: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 24 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 24 91% 60%;
+
+    /* Shadows */
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
+  }
 }
 
 @layer base {

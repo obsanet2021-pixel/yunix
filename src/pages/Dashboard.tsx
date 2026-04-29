@@ -52,13 +52,19 @@ export default function Dashboard() {
   const [selectedFirm, setSelectedFirm] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [showCheckin, setShowCheckin] = useState(false);
+  const [hasShownCheckin, setHasShownCheckin] = useState(false);
   const [statusTab, setStatusTab] = useState<string>("All");
   const [userName, setUserName] = useState<string>("Trader");
   const [totalPayoutAmount, setTotalPayoutAmount] = useState(0);
 
   useEffect(() => {
     fetchData();
-    checkDailyCheckin();
+    // Check if check-in should be triggered (from sign-in or session restore)
+    const shouldTrigger = localStorage.getItem('trigger_daily_checkin');
+    if (shouldTrigger === 'true') {
+      checkDailyCheckin();
+      localStorage.removeItem('trigger_daily_checkin');
+    }
     fetchUserName();
     fetchPayoutTotal();
   }, []);
@@ -80,16 +86,26 @@ export default function Dashboard() {
   };
 
   const checkDailyCheckin = async () => {
+    // Prevent showing multiple times in same session
+    if (hasShownCheckin) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const today = new Date().toISOString().split('T')[0];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const { data } = await supabase
       .from("daily_checkins")
       .select("id")
       .eq("user_id", user.id)
-      .eq("checkin_date", today)
+      .gte("created_at", today.toISOString())
       .maybeSingle();
-    if (!data) setShowCheckin(true);
+
+    if (!data) {
+      setShowCheckin(true);
+      setHasShownCheckin(true);
+    }
   };
 
   const fetchData = async () => {

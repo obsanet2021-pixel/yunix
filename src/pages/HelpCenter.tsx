@@ -133,19 +133,21 @@ export default function HelpCenter() {
         }
       });
 
+      console.log('Full response:', JSON.stringify(response, null, 2));
+
       if (response.error) throw response.error;
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.data.response || "I apologize, but I couldn't process that request. Would you like to speak with a support agent?",
+        content: response.data.message || "I apologize, but I couldn't process that request. Would you like to speak with a support agent?",
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
       // Check if escalation is needed
-      if (response.data.escalate) {
+      if (response.data.shouldEscalate) {
         await createTicketFromChat();
       }
     } catch (error) {

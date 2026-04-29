@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
+import { Link, useLocation, Outlet, useNavigate, Navigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useStaffPermissions } from "@/hooks/useStaffPermissions";
+import { useStaffPermissions, SECTION_ACCESS_LEVELS } from "@/hooks/useStaffPermissions";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { 
-  Crown, Users, BookOpen, Settings, DollarSign, HeadphonesIcon, 
+import { ROLE_SECTION_ACCESS } from "@/config/roles";
+import {
+  Crown, Users, BookOpen, Settings, DollarSign, HeadphonesIcon,
   Menu, X, LogOut, Sun, Moon, UserCog, BarChart3, Package,
   Briefcase, Code, GraduationCap, CheckCircle2, Activity, Bot,
   ChevronLeft, ChevronRight, Gift, UserPlus, Percent
@@ -21,113 +22,34 @@ interface StaffRole {
   name: string;
 }
 
-// CEO navigation - full access
-const ceoNavigation = [
-  { name: "Overview", href: "/app/admin/ceo", icon: Crown },
-  { name: "Staff Management", href: "/app/admin/staff-management", icon: Users },
-  { name: "Role Management", href: "/app/admin/roles", icon: Settings },
-  { name: "COO Dashboard", href: "/app/admin/staff/coo", icon: Briefcase },
-  { name: "CTO Dashboard", href: "/app/admin/staff/cto", icon: Code },
-  { name: "CFO Dashboard", href: "/app/admin/staff/cfo", icon: DollarSign },
-  { name: "Course Manager", href: "/app/admin/staff/course-manager", icon: GraduationCap },
-  { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon },
-  { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3 },
-  { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-  { name: "Plaque Orders", href: "/app/admin/staff/plaque-orders", icon: Package },
-  { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity },
-  { name: "Telegram Bot", href: "/app/admin/telegram-bot", icon: Bot },
-  { name: "Loyalty Ops", href: "/app/admin/loyalty-operations", icon: Gift },
-  { name: "Partner Ops", href: "/app/admin/partner-operations", icon: UserPlus },
-  { name: "Discount Rules", href: "/app/admin/discount-rules", icon: Percent },
-  { name: "System Settings", href: "/app/admin/settings", icon: Settings },
-];
+interface SystemSettings {
+  value: { enabled: boolean; message: string };
+}
 
-// Role-specific navigation based on exact requirements
-const roleNavigation: Record<string, { name: string; href: string; icon: any }[]> = {
-  // COO: All sections except System Settings
-  'COO': [
-    { name: "Overview", href: "/app/admin/ceo", icon: Crown },
-    { name: "Staff Management", href: "/app/admin/staff-management", icon: Users },
-    { name: "Role Management", href: "/app/admin/roles", icon: Settings },
-    { name: "COO Dashboard", href: "/app/admin/staff/coo", icon: Briefcase },
-    { name: "CTO Dashboard", href: "/app/admin/staff/cto", icon: Code },
-    { name: "CFO Dashboard", href: "/app/admin/staff/cfo", icon: DollarSign },
-    { name: "Course Manager", href: "/app/admin/staff/course-manager", icon: GraduationCap },
-    { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon },
-    { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3 },
-    { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-    { name: "Plaque Orders", href: "/app/admin/staff/plaque-orders", icon: Package },
-    { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity },
-  ],
-  // CTO: View Only/Read Only - just CTO Dashboard
-  'CTO': [
-    { name: "CTO Dashboard", href: "/app/admin/staff/cto", icon: Code },
-  ],
-  // CFO: CFO Dashboard, Analytics, QA, Plaque Orders (Payment + Pricing), Marketing
-  'CFO': [
-    { name: "CFO Dashboard", href: "/app/admin/staff/cfo", icon: DollarSign },
-    { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3 },
-    { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-    { name: "Plaque Orders", href: "/app/admin/staff/plaque-orders", icon: Package },
-    { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity },
-  ],
-  // Course Manager: Course Manager, Analytics Dashboard
-  'Course Manager': [
-    { name: "Course Manager", href: "/app/admin/staff/course-manager", icon: GraduationCap },
-    { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3 },
-  ],
-  // QA & Support combined role: Support Dashboard, QA Dashboard
-  'QA & Support': [
-    { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon },
-    { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-  ],
-  // QA Tester: Support Dashboard, QA Dashboard
-  'QA Tester': [
-    { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon },
-    { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-  ],
-  // Support Agent: Support Dashboard, QA Dashboard
-  'Support Agent': [
-    { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon },
-    { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-  ],
-  'Support Specialist': [
-    { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon },
-    { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2 },
-  ],
-  // Order Manager: Plaque Orders (Orders only - tabs restricted in component)
-  'Plaque Order Manager': [
-    { name: "Plaque Orders", href: "/app/admin/staff/plaque-orders", icon: Package },
-  ],
-  'order Manager': [
-    { name: "Plaque Orders", href: "/app/admin/staff/plaque-orders", icon: Package },
-  ],
-  // Marketing Agent: Marketing only
-  'Marketing': [
-    { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity },
-  ],
-  'Marketing Agent': [
-    { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity },
-  ],
-  // Social Media Manager: Marketing only
-  'Social Media Manager': [
-    { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity },
-  ],
-  // Data Analyst: Analytics Dashboard
-  'Data Analyst': [
-    { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3 },
-  ],
-  'Data Analyts': [
-    { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3 },
-  ],
-  // Developers: CTO Dashboard (read-only)
-  'Backend Developer': [
-    { name: "CTO Dashboard", href: "/app/admin/staff/cto", icon: Code },
-  ],
-  'Frontend Developer': [
-    { name: "CTO Dashboard", href: "/app/admin/staff/cto", icon: Code },
-  ],
-};
+interface StaffRecord {
+  role: string;
+}
+
+// Unified admin navigation with access level requirements
+const adminNavigation = [
+  { name: "Overview", href: "/app/admin/ceo", icon: Crown, section: 'overview' },
+  { name: "Staff Management", href: "/app/admin/staff-management", icon: Users, section: 'staff-management' },
+  { name: "Role Management", href: "/app/admin/roles", icon: Settings, section: 'role-management' },
+  { name: "COO Dashboard", href: "/app/admin/staff/coo", icon: Briefcase, section: 'staff/coo' },
+  { name: "CTO Dashboard", href: "/app/admin/staff/cto", icon: Code, section: 'staff/cto' },
+  { name: "CFO Dashboard", href: "/app/admin/staff/cfo", icon: DollarSign, section: 'staff/cfo' },
+  { name: "Course Manager", href: "/app/admin/staff/course-manager", icon: GraduationCap, section: 'staff/course-manager' },
+  { name: "Support Dashboard", href: "/app/admin/staff/support", icon: HeadphonesIcon, section: 'staff/support' },
+  { name: "Analytics Dashboard", href: "/app/admin/staff/analytics", icon: BarChart3, section: 'staff/analytics' },
+  { name: "QA Dashboard", href: "/app/admin/staff/qa", icon: CheckCircle2, section: 'staff/qa' },
+  { name: "Plaque Orders", href: "/app/admin/staff/plaque-orders", icon: Package, section: 'staff/plaque-orders' },
+  { name: "Marketing", href: "/app/admin/staff/marketing", icon: Activity, section: 'staff/marketing' },
+  { name: "Telegram Bot", href: "/app/admin/telegram-bot", icon: Bot, section: 'telegram-bot' },
+  { name: "Loyalty Ops", href: "/app/admin/loyalty-operations", icon: Gift, section: 'loyalty-operations' },
+  { name: "Partner Ops", href: "/app/admin/partner-operations", icon: UserPlus, section: 'partner-operations' },
+  { name: "Discount Rules", href: "/app/admin/discount-rules", icon: Percent, section: 'discount-rules' },
+  { name: "System Settings", href: "/app/admin/settings", icon: Settings, section: 'settings' },
+];
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -135,8 +57,8 @@ export default function AdminLayout() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
-  const { isStaff, isAdmin } = useStaffPermissions();
+  const { user, signOut } = useAuth();
+  const { isStaff, isAdmin, hasAccessToSection, hasReadOnlyAccess, hasWriteAccess, staffRoleName, loading: permLoading } = useStaffPermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -148,6 +70,7 @@ export default function AdminLayout() {
   });
   const [loading, setLoading] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [staffRole, setStaffRole] = useState<string | null>(null);
   
   // On mobile/tablet, always show full sidebar content when opened
   const showCompactSidebar = sidebarCollapsed && !isMobile;
@@ -171,31 +94,69 @@ export default function AdminLayout() {
         .eq('key', 'maintenance_mode')
         .single();
       
-      if (data?.value) {
-        const value = data.value as { enabled: boolean; message: string };
-        setMaintenanceMode(value.enabled || false);
+      if (data) {
+        const settings = data as SystemSettings;
+        if (settings.value) {
+          setMaintenanceMode(settings.value.enabled || false);
+        }
       }
     };
     checkMaintenance();
   }, []);
 
-  // ✅ Server-side validation - redirect if not staff
+  // Fetch staff role from staff table
   useEffect(() => {
-    if (user && !loading) {
-      if (!isStaff) {
-        navigate("/app/dashboard");
+    const fetchStaffRole = async () => {
+      if (!user || isAdmin) {
+        setStaffRole(null);
+        return;
       }
+
+      const { data } = await supabase
+        .from('staff')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data) {
+        const staffData = data as StaffRecord;
+        if (staffData.role) {
+          setStaffRole(staffData.role);
+        }
+      }
+    };
+
+    fetchStaffRole();
+  }, [user, isAdmin]);
+
+  // Set loading complete once permissions are loaded
+  useEffect(() => {
+    if (!permLoading) {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [user, isStaff, loading, navigate]);
+  }, [permLoading]);
+
+  // Redirect non-staff users to /unauthorized (never to user dashboard)
+  useEffect(() => {
+    // Wait for permission loading to complete
+    if (permLoading) return;
+    
+    // Only redirect if we have confirmed the user is not staff
+    if (user && !isStaff) {
+      navigate("/unauthorized", { state: { from: location } });
+    }
+  }, [user, isStaff, permLoading, navigate, location]);
 
   const handleSignOut = async () => {
-    const { signOut } = useAuth();
     await signOut();
   };
 
   const switchToUser = () => {
     navigate("/app/dashboard");
+  };
+
+  const switchToAdmin = () => {
+    navigate("/app/admin/ceo");
   };
 
   const getAdminRoute = () => {
@@ -212,19 +173,27 @@ export default function AdminLayout() {
     );
   }
 
-  // SECURITY: If not authorized, don't render admin layout
-  if (!isStaff || !user) {
+  // SECURITY: If not authorized, redirect to /unauthorized
+  // This check runs after loading is complete
+  if (!loading && !isStaff) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
+      <Navigate to="/unauthorized" state={{ from: location }} replace />
     );
   }
 
-  // Get navigation based on role
-  const navigation = isAdmin 
-    ? ceoNavigation 
-    : [];
+  // Get navigation based on role-specific section access
+  const navigation = adminNavigation.filter(item => {
+    // If user is admin (CEO), show all sections
+    if (isAdmin) return true;
+
+    // If staff role is defined, check role-specific access
+    if (staffRoleName && ROLE_SECTION_ACCESS[staffRoleName]) {
+      return ROLE_SECTION_ACCESS[staffRoleName].includes(item.section);
+    }
+
+    // Fallback to tier-based access
+    return hasAccessToSection(item.section);
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -324,10 +293,10 @@ export default function AdminLayout() {
               <>
                 <RoleSwitcher
                   currentMode="admin"
-                  staffRoleName={isAdmin ? 'Admin' : 'Staff'}
+                  staffRoleName={staffRole || (isAdmin ? 'Admin' : 'Staff')}
                   isStaff={true}
                   onSwitchToUser={switchToUser}
-                  onSwitchToAdmin={() => {}}
+                  onSwitchToAdmin={switchToAdmin}
                   onSignOut={handleSignOut}
                 />
                 
@@ -400,10 +369,10 @@ export default function AdminLayout() {
             <div className="flex items-center gap-2">
               <RoleSwitcher
                 currentMode="admin"
-                staffRoleName={isAdmin ? 'Admin' : 'Staff'}
+                staffRoleName={staffRole || (isAdmin ? 'Admin' : 'Staff')}
                 isStaff={true}
                 onSwitchToUser={switchToUser}
-                onSwitchToAdmin={() => {}}
+                onSwitchToAdmin={switchToAdmin}
                 onSignOut={handleSignOut}
               />
               <Button 
