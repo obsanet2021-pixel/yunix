@@ -4,7 +4,7 @@ import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+// Recharts replaced with custom SVG chart
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -40,6 +40,31 @@ const getPnLStyles = (profit: number) => {
   if (profit < 0) return { color: 'text-red-500', icon: TrendingDown };
   return { color: 'text-muted-foreground', icon: Minus };
 };
+
+// Helper functions for SVG chart
+function generateChartPath(data: { date: string; profit: number }[]): string {
+  if (data.length === 0) return "";
+  
+  const maxProfit = Math.max(...data.map(d => d.profit), 0);
+  const minProfit = Math.min(...data.map(d => d.profit), 0);
+  const range = maxProfit - minProfit || 1;
+  
+  return data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 400;
+    const y = 100 - ((d.profit - minProfit) / range) * 80 - 10;
+    return `${i === 0 ? 'M' : 'L'}${x} ${y}`;
+  }).join(' ');
+}
+
+function getLastPointY(data: { date: string; profit: number }[]): number {
+  if (data.length === 0) return 50;
+  
+  const maxProfit = Math.max(...data.map(d => d.profit), 0);
+  const minProfit = Math.min(...data.map(d => d.profit), 0);
+  const range = maxProfit - minProfit || 1;
+  
+  return 100 - ((data[data.length - 1].profit - minProfit) / range) * 80 - 10;
+}
 
 const STATUS_TABS = ["All", "Active", "Passed", "Blocked", "Failed"] as const;
 
@@ -365,16 +390,23 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="px-2 sm:px-4 pb-3 overflow-x-auto">
             {chartData.length > 0 ? (
-              <div className="h-[200px] sm:h-[250px] min-w-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '10px' }} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '10px' }} width={35} />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '11px' }} />
-                    <Line type="monotone" dataKey="profit" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="h-[200px] sm:h-[250px] min-w-[280px] relative">
+                <svg className="w-full h-full" viewBox="0 0 400 100" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2"/>
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d={`${generateChartPath(chartData)} L400 100 L0 100 Z`} fill="url(#chartGradient)"/>
+                  <path d={generateChartPath(chartData)} fill="none" stroke="hsl(var(--primary))" strokeWidth="2"/>
+                  <circle cx="400" cy={getLastPointY(chartData)} r="4" fill="hsl(var(--primary))" />
+                </svg>
+                <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] text-muted-foreground px-2">
+                  {chartData.map((d, i) => (
+                    <span key={i}>{d.date}</span>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">No trade data available yet</div>
