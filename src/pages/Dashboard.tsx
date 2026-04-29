@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 // Recharts replaced with custom SVG chart
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
 import MotivationalBar from "@/components/MotivationalBar";
@@ -81,6 +81,7 @@ export default function Dashboard() {
   const [statusTab, setStatusTab] = useState<string>("All");
   const [userName, setUserName] = useState<string>("Trader");
   const [totalPayoutAmount, setTotalPayoutAmount] = useState(0);
+  const [chartPeriod, setChartPeriod] = useState<7 | 30 | 90>(7);
 
   useEffect(() => {
     fetchData();
@@ -190,13 +191,15 @@ export default function Dashboard() {
   const passedCount = propFirms.filter(f => (f.account_status || "").toLowerCase() === "passed").length;
   const fundedCount = propFirms.filter(f => f.account_type === "Funded").length;
 
-  const chartData = filteredTrades.reduce((acc: any[], trade) => {
-    const date = format(new Date(trade.trade_date), "MMM d");
-    const existing = acc.find(item => item.date === date);
-    if (existing) { existing.profit += Number(trade.profit); }
-    else { acc.push({ date, profit: Number(trade.profit) }); }
-    return acc;
-  }, []).slice(-7);
+  const chartData = filteredTrades
+    .filter(trade => new Date(trade.trade_date) >= subDays(new Date(), chartPeriod))
+    .reduce((acc: any[], trade) => {
+      const date = format(new Date(trade.trade_date), "MMM d");
+      const existing = acc.find(item => item.date === date);
+      if (existing) { existing.profit += Number(trade.profit); }
+      else { acc.push({ date, profit: Number(trade.profit) }); }
+      return acc;
+    }, []);
 
   const pnlStyles = getPnLStyles(totalProfit);
   const PnLIcon = pnlStyles.icon;
@@ -385,8 +388,21 @@ export default function Dashboard() {
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3 w-full max-w-full overflow-hidden">
         <Card className="glow-card lg:col-span-2 w-full min-w-0">
-          <CardHeader className="py-3 px-3 sm:px-4">
+          <CardHeader className="py-3 px-3 sm:px-4 flex flex-row items-center justify-between">
             <CardTitle className="text-sm sm:text-base">Recent Performance</CardTitle>
+            <div className="flex gap-1">
+              {[7, 30, 90].map((days) => (
+                <Button
+                  key={days}
+                  variant={chartPeriod === days ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setChartPeriod(days as 7 | 30 | 90)}
+                >
+                  {days}D
+                </Button>
+              ))}
+            </div>
           </CardHeader>
           <CardContent className="px-2 sm:px-4 pb-3 overflow-x-auto">
             {chartData.length > 0 ? (
