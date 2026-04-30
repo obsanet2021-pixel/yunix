@@ -5,7 +5,11 @@
  * Env vars:
  *   GEMINI_API_KEY — required, your Google AI API key
  *   GEMINI_MODEL   — optional, defaults to "gemini-2.0-flash"
+ *   GROQ_API_KEY   — optional, for fallback when Gemini is rate-limited
+ *   GROQ_MODEL     — optional, defaults to "llama-3.3-70b-versatile"
  */
+
+import { callGroq, callGroqWithTool, callGroqStream, type GroqMessage, type GroqFunctionDeclaration, type GroqGenerationConfig } from './groq';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -75,13 +79,6 @@ function endpoint(stream: boolean, model: string, key: string): string {
     : `${base}:generateContent?key=${key}`;
 }
 
-function jsonResp(body: unknown, status = 200, headers = CORS_HEADERS): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...headers, "Content-Type": "application/json" },
-  });
-}
-
 function handleGeminiError(response: Response): Response {
   if (response.status === 429) {
     return jsonResp({ error: "Rate limits exceeded, please try again later." }, 429);
@@ -92,10 +89,49 @@ function handleGeminiError(response: Response): Response {
   return jsonResp({ error: "AI gateway error" }, 500);
 }
 
-// ── Public API ────────────────────────────────────────────────────────
+// ── Convert Gemini format to Groq format ───────────────────────────────
+
+function geminiToGroqMessages(contents: GeminiContent[], systemInstruction?: string): GroqMessage[] {
+  const messages: GroqMessage[] = [];
+  
+  if (systemInstruction) {
+    messages.push({ role: "system", content: systemInstruction });
+  }
+  
+  for (const content of contents) {
+    const textParts = content.parts.filter(p => p.text).map(p => p.text).join("\n");
+    if (textParts) {
+      messages.push({
+        role: content.role === "model" ? "assistant" : "user",
+        content: textParts,
+      });
+    }
+  }
+  
+  return messages;
+}
+
+function geminiToGroqTools(tools: GeminiFunctionDeclaration[]): GroqFunctionDeclaration[] {
+  return tools.map(tool => ({
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters,
+  }));
+}
+
+function geminiToGroqConfig(config?: GeminiGenerationConfig): GroqGenerationConfig | undefined {
+  if (!config) return undefined;
+  return {
+    temperature: config.temperature,
+    max_tokens: config.maxOutputTokens,
+    top_p: config.topP,
+  };
+}
+
+// ── Public API with Groq Fallback ────────────────────────────────────────
 
 /**
- * Non-streaming Gemini call. Returns the text from the first candidate.
+ * Non-streaming Gemini call with Groq fallback. Returns the text from the first candidate.
  * Throws on missing key, non-OK response, or empty candidates.
  */
 export async function callGemini(
@@ -117,20 +153,40 @@ export async function callGemini(
     body.generationConfig = opts.generationConfig;
   }
 
-  const response = await fetch(endpoint(false, model, key), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await fetch(endpoint(false, model, key), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) throw response; // caller catches and uses handleGeminiError
+    if (!response.ok) {
+      // If rate limited, try Groq fallback
+      if (response.status === 429 && Deno.env.get("GROQ_API_KEY")) {
+        console.warn("Gemini rate limited, falling back to Groq...");
+        const groqMessages = geminiToGroqMessages(contents, opts?.systemInstruction);
+        const groqConfig = geminiToGroqConfig(opts?.generationConfig);
+        return await callGroq(groqMessages, { systemInstruction: opts?.systemInstruction, generationConfig: groqConfig });
+      }
+      throw response;
+    }
 
-  const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const data = await response.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  } catch (error) {
+    // If Groq is available and Gemini failed, try Groq
+    if (Deno.env.get("GROQ_API_KEY") && !(error instanceof Response)) {
+      console.warn("Gemini failed, falling back to Groq...", error);
+      const groqMessages = geminiToGroqMessages(contents, opts?.systemInstruction);
+      const groqConfig = geminiToGroqConfig(opts?.generationConfig);
+      return await callGroq(groqMessages, { systemInstruction: opts?.systemInstruction, generationConfig: groqConfig });
+    }
+    throw error;
+  }
 }
 
 /**
- * Gemini call with forced tool calling (structured output).
+ * Gemini call with forced tool calling (structured output) and Groq fallback.
  * Returns the parsed functionCall args from the first candidate.
  */
 export async function callGeminiWithTool(
@@ -167,22 +223,44 @@ export async function callGeminiWithTool(
     },
   };
 
-  const response = await fetch(endpoint(false, model, key), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await fetch(endpoint(false, model, key), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) throw response;
+    if (!response.ok) {
+      // If rate limited, try Groq fallback
+      if (response.status === 429 && Deno.env.get("GROQ_API_KEY")) {
+        console.warn("Gemini rate limited, falling back to Groq...");
+        const groqMessages = geminiToGroqMessages(contents, opts?.systemInstruction);
+        const groqTools = geminiToGroqTools(tools);
+        const groqConfig = geminiToGroqConfig(opts?.generationConfig);
+        return await callGroqWithTool(groqMessages, groqTools, { systemInstruction: opts?.systemInstruction, generationConfig: groqConfig });
+      }
+      throw response;
+    }
 
-  const data = await response.json();
-  const fc = data?.candidates?.[0]?.content?.parts?.[0]?.functionCall;
-  if (!fc) throw new Error("No function call in Gemini response");
-  return { name: fc.name, args: fc.args as Record<string, unknown> };
+    const data = await response.json();
+    const fc = data?.candidates?.[0]?.content?.parts?.[0]?.functionCall;
+    if (!fc) throw new Error("No function call in Gemini response");
+    return { name: fc.name, args: fc.args as Record<string, unknown> };
+  } catch (error) {
+    // If Groq is available and Gemini failed, try Groq
+    if (Deno.env.get("GROQ_API_KEY") && !(error instanceof Response)) {
+      console.warn("Gemini failed, falling back to Groq...", error);
+      const groqMessages = geminiToGroqMessages(contents, opts?.systemInstruction);
+      const groqTools = geminiToGroqTools(tools);
+      const groqConfig = geminiToGroqConfig(opts?.generationConfig);
+      return await callGroqWithTool(groqMessages, groqTools, { systemInstruction: opts?.systemInstruction, generationConfig: groqConfig });
+    }
+    throw error;
+  }
 }
 
 /**
- * Streaming Gemini call. Returns the raw SSE Response for the caller
+ * Streaming Gemini call with Groq fallback. Returns the raw SSE Response for the caller
  * to pipe through to the client.
  */
 export async function callGeminiStream(
@@ -204,14 +282,34 @@ export async function callGeminiStream(
     body.generationConfig = opts.generationConfig;
   }
 
-  const response = await fetch(endpoint(true, model, key), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const response = await fetch(endpoint(true, model, key), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) throw response;
-  return response;
+    if (!response.ok) {
+      // If rate limited, try Groq fallback
+      if (response.status === 429 && Deno.env.get("GROQ_API_KEY")) {
+        console.warn("Gemini rate limited, falling back to Groq...");
+        const groqMessages = geminiToGroqMessages(contents, opts?.systemInstruction);
+        const groqConfig = geminiToGroqConfig(opts?.generationConfig);
+        return await callGroqStream(groqMessages, { systemInstruction: opts?.systemInstruction, generationConfig: groqConfig });
+      }
+      throw response;
+    }
+    return response;
+  } catch (error) {
+    // If Groq is available and Gemini failed, try Groq
+    if (Deno.env.get("GROQ_API_KEY") && !(error instanceof Response)) {
+      console.warn("Gemini failed, falling back to Groq...", error);
+      const groqMessages = geminiToGroqMessages(contents, opts?.systemInstruction);
+      const groqConfig = geminiToGroqConfig(opts?.generationConfig);
+      return await callGroqStream(groqMessages, { systemInstruction: opts?.systemInstruction, generationConfig: groqConfig });
+    }
+    throw error;
+  }
 }
 
 /**
