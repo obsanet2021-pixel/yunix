@@ -50,13 +50,17 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
           </ScrollReveal>
           
           <ScrollReveal direction="up" delay={100}>
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-6 leading-[1.05]">
-              The Journal That<br />
-              <span className="gradient-text">Funded Traders</span><br />
-              <span className="text-muted-foreground">Actually Use</span>
-            </h1>
+            <div className="flex items-center justify-center mx-auto" style={{ height: '280px', width: '1400px' }}>
+              <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-3 leading-[1.05] text-center w-full" style={{ marginLeft: '-400px' }}>
+                <span className="flex flex-col items-center justify-center">
+                  <span className="text-center">The Journal That</span>
+                  <span className="gradient-text text-center">Funded Traders</span>
+                  <span className="text-muted-foreground text-center">Actually Use</span>
+                </span>
+              </h1>
+            </div>
           </ScrollReveal>
-          
+
           <ScrollReveal direction="up" delay={200}>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light">
               Track every trade. Decode every pattern. Let AI reveal what's holding you back — before the market does.
@@ -70,7 +74,7 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
                 onClick={() => navigate("/auth")} 
                 className="group w-full sm:w-auto px-8 h-14 text-base font-semibold bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all duration-300 hover:-translate-y-0.5 rounded-xl"
               >
-                Start for Free
+                Start Free
                 <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 

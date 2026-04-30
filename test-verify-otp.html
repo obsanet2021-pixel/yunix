@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Telegram OTP Test</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px 0; cursor: pointer; font-size: 16px; }
+        .result { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; white-space: pre-wrap; }
+        .success { background: #d4edda; border: 1px solid #28a745; }
+        .error { background: #f8d7da; border: 1px solid #dc3545; }
+        input { padding: 8px; width: 100%; margin: 5px 0; font-size: 14px; }
+        .info { background: #d1ecf1; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Verify Telegram OTP Test</h1>
+    
+    <div class="info">
+        <strong>How this works:</strong><br>
+        This page directly tests the verify-telegram-otp edge function<br>
+        to debug the "Invalid or expired code" error.
+    </div>
+    
+    <label>Email:</label>
+    <input type="email" id="email" value="obsanet2021@gmail.com" />
+    
+    <label>OTP Code:</label>
+    <input type="text" id="otpCode" placeholder="Enter 6-digit code from Telegram" />
+    
+    <label>New Password (optional):</label>
+    <input type="password" id="newPassword" placeholder="Leave blank to only verify OTP" />
+    
+    <button onclick="verifyOTP()" style="background: #007bff; color: white; border: none;">
+        Verify OTP
+    </button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://ounphbavkyrmotskydto.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91bnBoYmF2a3lybW90c2t5ZHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzOTYxNjAsImV4cCI6MjA1NTk3MjE2MH0.KwyRLr4hGfdKphUlFWiE5bQwo0OZRgMvoYaoV3bGj0s';
+        
+        function showResult(title, data, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'result ' + (isError ? 'error' : 'success');
+            div.innerHTML = `<strong>${title}</strong><br>${JSON.stringify(data, null, 2)}`;
+            document.getElementById('results').prepend(div);
+        }
+        
+        async function verifyOTP() {
+            const email = document.getElementById('email').value;
+            const otpCode = document.getElementById('otpCode').value;
+            const newPassword = document.getElementById('newPassword').value;
+            
+            if (!email || !otpCode) {
+                showResult('Error', { message: 'Email and OTP code are required' }, true);
+                return;
+            }
+            
+            showResult('Starting verification...', { email, otpCode: otpCode.substring(0, 3) + '***' }, false);
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/verify-telegram-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        otpCode: otpCode,
+                        newPassword: newPassword || undefined
+                    })
+                });
+                
+                showResult('Response received', { 
+                    status: response.status,
+                    statusText: response.statusText 
+                }, false);
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult('✅ SUCCESS!', data, false);
+                } else {
+                    showResult('❌ Verification Failed', data, true);
+                }
+                
+            } catch (err) {
+                showResult('❌ Error', { error: err.message }, true);
+                console.error('Full error:', err);
+            }
+        }
+    </script>
+</body>
+</html>

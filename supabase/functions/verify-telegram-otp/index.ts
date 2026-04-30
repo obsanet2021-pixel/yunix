@@ -51,33 +51,15 @@ Deno.serve(async (req: Request) => {
     console.log(`🔐 Verifying OTP for ${normalizedEmail}`);
     console.log(`Input code: ${trimmedOtpCode}`);
 
-    // Find user by email
-    const adminUrl = `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(normalizedEmail)}`;
-    const adminResponse = await fetch(adminUrl, {
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey
-      }
-    });
+    // Find user by email from profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
-    const adminText = await adminResponse.text();
-    let users;
-    try {
-      users = JSON.parse(adminText);
-    } catch (parseError) {
-      console.error('Failed to parse admin users response:', adminText, parseError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          data: null,
-          error: { code: "USER_LOOKUP_FAILED", message: "User lookup failed" },
-          meta: {},
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!adminResponse.ok || !Array.isArray(users) || users.length === 0) {
+    if (profileError || !profile) {
+      console.error('Profile lookup failed:', profileError?.message);
       return new Response(
         JSON.stringify({
           success: false,
@@ -89,15 +71,57 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const user = users[0];
+    const user = { id: profile.id, email: profile.email };
 
-    // Check OTP in user app_metadata
-    const metadata = user.app_metadata || {};
-    const storedOtp = metadata.reset_otp;
-    const expiresAt = metadata.reset_otp_expires_at;
+    // Check OTP in telegram_otp table
+    const { data: otpRecord, error: otpError } = await supabase
+      .from('telegram_otp')
+      .select('*')
+      .eq('email', normalizedEmail)
+      .eq('user_id', user.id)
+      .eq('used', false)
+      .gt('expires_at', currentTime)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (!storedOtp || !expiresAt || storedOtp !== trimmedOtpCode || new Date(expiresAt) < currentTime) {
+    if (otpError) {
+      console.error('OTP lookup error:', otpError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          data: null,
+          error: { code: "OTP_LOOKUP_FAILED", message: "Failed to verify OTP" },
+          meta: {},
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!otpRecord) {
       console.log(`❌ No matching OTP found for ${normalizedEmail}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          data: null,
+          error: { code: "OTP_INVALID", message: "Invalid or expired verification code." },
+          meta: {},
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify the hashed OTP
+    const otpHashBuffer = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(trimmedOtpCode)
+    );
+    const hashedInput = Array.from(new Uint8Array(otpHashBuffer))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    if (hashedInput !== otpRecord.otp_code) {
+      console.log(`❌ OTP hash mismatch for ${normalizedEmail}`);
       return new Response(
         JSON.stringify({
           success: false,
@@ -130,107 +154,44 @@ Deno.serve(async (req: Request) => {
       if (!passwordUpdateResponse.ok) {
         const errorText = await passwordUpdateResponse.text();
         console.error('Failed to update password:', errorText);
+        let errorMessage = "Failed to update password";
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorText;
+        } catch {
+          errorMessage = errorText;
+        }
         return new Response(
           JSON.stringify({
             success: false,
             data: null,
-            error: { code: "PASSWORD_UPDATE_FAILED", message: "Failed to update password" },
+            error: { code: "PASSWORD_UPDATE_FAILED", message: errorMessage },
             meta: {},
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       console.log(`✅ Password updated for user: ${user.id}`);
+
+      // Mark OTP as used only after successful password reset
+      const { error: markUsedError } = await supabase
+        .from('telegram_otp')
+        .update({ used: true })
+        .eq('id', otpRecord.id);
+
+      if (markUsedError) {
+        console.warn('Failed to mark OTP as used:', markUsedError);
+      }
     }
 
-    // Clear OTP from metadata
-    const clearUrl = `${supabaseUrl}/auth/v1/admin/users/${user.id}`;
-    const clearResponse = await fetch(clearUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        app_metadata: {
-          reset_otp: null,
-          reset_otp_expires_at: null
-        }
-      })
-    });
-
-    if (!clearResponse.ok) {
-      console.warn(`⚠️ Failed to clear OTP from metadata`);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          data: null,
-          error: {
-            code: "OTP_UPDATE_FAILED",
-            message: "Failed to update OTP status.",
-          },
-          meta: {},
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`✅ OTP cleared from metadata`);
-
-    // Create session
-    const sessionToken = crypto.randomUUID() + crypto.randomUUID();
-    
-    const hashBuffer = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(sessionToken),
-    );
-
-    const tokenHash = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-               req.headers.get("x-real-ip")?.trim() ||
-               null;
-
-    const userAgent = req.headers.get("user-agent") || null;
-
-    const { error: sessionError } = await supabase.from("sessions").insert({
-      email: normalizedEmail,
-      user_id: user.id,
-      token_hash: tokenHash,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      ip_address: ip,
-      user_agent: userAgent,
-      revoked: false,
-    });
-
-    if (sessionError) {
-      console.error("Error creating session:", sessionError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          data: null,
-          error: {
-            code: "SESSION_CREATE_FAILED",
-            message: "Could not create session",
-          },
-          meta: {},
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`✅ Session created for ${normalizedEmail}`);
-
-    // Return session token
+    // Return success - OTP verified
+    console.log(`✅ OTP verified successfully for ${normalizedEmail}`);
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          session_token: sessionToken,
           user_id: user.id,
+          email: user.email,
         },
         error: null,
         meta: {},

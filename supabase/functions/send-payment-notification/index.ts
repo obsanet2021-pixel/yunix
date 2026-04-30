@@ -86,7 +86,7 @@ const generatePaymentApprovedHtml = (data: NotificationRequest) => `
             <table style="width: 100%;">
               <tr>
                 <td style="padding: 8px 0; color: #86efac; font-size: 14px;">Payment ID:</td>
-                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.paymentId}</td>
+                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.paymentId || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #86efac; font-size: 14px;">Amount:</td>
@@ -142,7 +142,7 @@ const generatePaymentRejectedHtml = (data: NotificationRequest) => `
             <table style="width: 100%;">
               <tr>
                 <td style="padding: 8px 0; color: #fca5a5; font-size: 14px;">Payment ID:</td>
-                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.paymentId}</td>
+                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.paymentId || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #fca5a5; font-size: 14px;">Amount:</td>
@@ -215,20 +215,20 @@ const generateOrderPlacedHtml = (data: NotificationRequest) => `
             <table style="width: 100%;">
               <tr>
                 <td style="padding: 8px 0; color: #fcd34d; font-size: 14px;">Order ID:</td>
-                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.orderId}</td>
+                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.orderId || 'N/A'}</td>
               </tr>
               ${data.orderDetails ? `
               <tr>
                 <td style="padding: 8px 0; color: #fcd34d; font-size: 14px;">Plaque Size:</td>
-                <td style="text-align: right; color: #fafafa; font-size: 14px;">${data.orderDetails.size}</td>
+                <td style="text-align: right; color: #fafafa; font-size: 14px;">${data.orderDetails.size || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #fcd34d; font-size: 14px;">Quantity:</td>
-                <td style="text-align: right; color: #fafafa; font-size: 14px;">${data.orderDetails.quantity}</td>
+                <td style="text-align: right; color: #fafafa; font-size: 14px;">${data.orderDetails.quantity || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #fcd34d; font-size: 14px;">Delivery:</td>
-                <td style="text-align: right; color: #fafafa; font-size: 14px;">${data.orderDetails.deliveryMethod}</td>
+                <td style="text-align: right; color: #fafafa; font-size: 14px;">${data.orderDetails.deliveryMethod || 'N/A'}</td>
               </tr>
               ` : ''}
               <tr>
@@ -297,7 +297,7 @@ const generatePaymentSubmittedHtml = (data: NotificationRequest) => `
             <table style="width: 100%;">
               <tr>
                 <td style="padding: 8px 0; color: #93c5fd; font-size: 14px;">Invoice ID:</td>
-                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.invoiceId || data.orderId}</td>
+                <td style="text-align: right; font-family: monospace; color: #fafafa; font-size: 14px;">${data.invoiceId || data.orderId || 'N/A'}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #93c5fd; font-size: 14px;">Amount:</td>
@@ -345,7 +345,7 @@ const generatePaymentSubmittedHtml = (data: NotificationRequest) => `
 </html>`;
 
 // Send Telegram notification
-const sendTelegramNotification = async (chatId: number, type: string, data: any) => {
+const sendTelegramNotification = async (chatId: number, type: string, data: Record<string, unknown>) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
   
@@ -381,6 +381,35 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const rawData = await req.json();
     console.log("Received notification request:", rawData);
+
+    // Input validation
+    if (!rawData || typeof rawData !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }), 
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!rawData.type) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: type' }), 
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!rawData.customerName || !rawData.customerEmail) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: customerName, customerEmail' }), 
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!rawData.date) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required field: date' }), 
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // Handle both legacy and new format
     let data: NotificationRequest;
@@ -424,19 +453,19 @@ const handler = async (req: Request): Promise<Response> => {
         break;
       case 'shipment_preparing':
         subject = "📦 Preparing Your Order – YUNIX";
-        html = `<p>Dear ${data.customerName}, your order #${data.orderId} is being prepared for shipment!</p>`;
+        html = `<p>Dear ${data.customerName}, your order #${data.orderId || 'N/A'} is being prepared for shipment!</p>`;
         break;
       case 'order_shipped':
         subject = "🚚 Your Order Is On The Way – YUNIX";
-        html = `<p>Dear ${data.customerName}, your order #${data.orderId} has been shipped!</p>`;
+        html = `<p>Dear ${data.customerName}, your order #${data.orderId || 'N/A'} has been shipped!</p>`;
         break;
       case 'order_delivered':
         subject = "✅ Order Delivered – YUNIX";
-        html = `<p>Dear ${data.customerName}, your order #${data.orderId} has been delivered! Please confirm receipt in the app.</p>`;
+        html = `<p>Dear ${data.customerName}, your order #${data.orderId || 'N/A'} has been delivered! Please confirm receipt in the app.</p>`;
         break;
       case 'customer_confirmed':
         subject = "🎉 Thank You! – YUNIX";
-        html = `<p>Dear ${data.customerName}, thank you for confirming receipt of order #${data.orderId}!</p>`;
+        html = `<p>Dear ${data.customerName}, thank you for confirming receipt of order #${data.orderId || 'N/A'}!</p>`;
         break;
       default:
         throw new Error(`Unknown notification type: ${data.type}`);
@@ -486,10 +515,11 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ success: true, emailId: emailResponse.data?.id }), 
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error sending notification:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ error: errorMessage }), 
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

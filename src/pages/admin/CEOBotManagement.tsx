@@ -31,7 +31,7 @@ export default function CEOBotManagement() {
   const [groupChatId, setGroupChatId] = useState('');
   const [autoNotify, setAutoNotify] = useState(true);
 
-  const WEBHOOK_URL = `https://bduwtkejrfmcggfwniqe.supabase.co/functions/v1/ceo-bot-webhook`;
+  const WEBHOOK_URL = `https://ounphbavkyrmotskydto.supabase.co/functions/v1/ceo-bot-webhook`;
 
   useEffect(() => {
     if (!permLoading && !isCEO) {

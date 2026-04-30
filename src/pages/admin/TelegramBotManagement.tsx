@@ -59,12 +59,6 @@ export default function TelegramBotManagement() {
     }
   }, [isCEO, permLoading, navigate]);
 
-  useEffect(() => {
-    if (isCEO) {
-      loadData();
-    }
-  }, [isCEO]);
-
   const loadData = async () => {
     setLoading(true);
     await Promise.all([
@@ -74,6 +68,12 @@ export default function TelegramBotManagement() {
     ]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (isCEO) {
+      loadData();
+    }
+  }, [isCEO, loadData]);
 
   const loadWebhookStatus = async () => {
     try {
@@ -95,7 +95,7 @@ export default function TelegramBotManagement() {
       .order('role', { ascending: false });
 
     if (!error && data) {
-      setAgents(data as any);
+      setAgents(data as SupportAgent[]);
     }
   };
 
@@ -190,7 +190,7 @@ export default function TelegramBotManagement() {
     });
   };
 
-  const expectedWebhookUrl = `https://bduwtkejrfmcggfwniqe.supabase.co/functions/v1/telegram-support-webhook`;
+  const expectedWebhookUrl = `https://ounphbavkyrmotskydto.supabase.co/functions/v1/telegram-support-webhook`;
   const isWebhookCorrect = webhookInfo?.url === expectedWebhookUrl;
 
   if (loading) {

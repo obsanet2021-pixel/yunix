@@ -270,10 +270,10 @@ export default function Auth() {
       return;
     }
 
-    if (!challengeId) {
+    if (!email) {
       toast({
         title: "Error",
-        description: "Challenge ID missing. Please restart the process.",
+        description: "Email missing. Please restart the process.",
         variant: "destructive",
       });
       return;
@@ -281,22 +281,12 @@ export default function Auth() {
 
     setVerifyingOTP(true);
     try {
-      const response = await supabase.functions.invoke('auth-verify-challenge', {
-        body: { challengeId, code: otpCode }
+      const response = await supabase.functions.invoke('verify-telegram-otp', {
+        body: { email: email, otpCode: otpCode }
       });
 
       if (response.error || !response.data?.success) {
-        throw new Error(response.data?.error || 'Invalid or expired code');
-      }
-
-      // Store the recovery token for password reset
-      const recoveryToken = response.data.recoveryToken;
-      if (recoveryToken) {
-        try {
-          localStorage.setItem('reset_recovery_token', recoveryToken);
-        } catch (error) {
-          console.error('Failed to store recovery token:', error);
-        }
+        throw new Error(response.data?.error?.message || 'Invalid or expired code');
       }
 
       toast({
@@ -322,30 +312,13 @@ export default function Auth() {
       const validated = passwordSchema.parse({ password: newPassword, confirmPassword });
       setLoading(true);
 
-      try {
-        const recoveryToken = localStorage.getItem('reset_recovery_token');
-        if (!recoveryToken) {
-          throw new Error('Session expired. Please restart the password reset process.');
-        }
-      } catch (error) {
-        console.error('Error getting recovery token from local storage:', error);
-        throw new Error('Failed to retrieve recovery token');
-      }
-
-      // Use the recovery token to update password via Supabase Auth
-      const { error } = await supabase.auth.updateUser({
-        password: validated.password
+      // Call verify-telegram-otp with newPassword to reset password
+      const response = await supabase.functions.invoke('verify-telegram-otp', {
+        body: { email: email, otpCode: otpCode, newPassword: validated.password }
       });
 
-      if (error) {
-        throw error;
-      }
-
-      // Clean up
-      try {
-        localStorage.removeItem('reset_recovery_token');
-      } catch (error) {
-        console.error('Failed to remove recovery token:', error);
+      if (response.error || !response.data?.success) {
+        throw new Error(response.data?.error?.message || 'Failed to reset password');
       }
 
       toast({

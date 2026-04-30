@@ -44,7 +44,7 @@ export default function DeliveryBotManagement() {
   const [telegramErrors, setTelegramErrors] = useState<TelegramError[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
-  const WEBHOOK_URL = `https://bduwtkejrfmcggfwniqe.supabase.co/functions/v1/delivery-bot-webhook`;
+  const WEBHOOK_URL = `https://ounphbavkyrmotskydto.supabase.co/functions/v1/delivery-bot-webhook`;
 
   useEffect(() => {
     if (!permLoading && !isCEO) {

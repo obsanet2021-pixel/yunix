@@ -44,6 +44,21 @@ serve(async (req) => {
 
     const body = await req.json();
     const { type, data } = body;
+
+    // Input validation
+    if (!type) {
+      return new Response(JSON.stringify({ error: 'Missing required field: type' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!data || typeof data !== 'object') {
+      return new Response(JSON.stringify({ error: 'Missing or invalid data field' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     console.log('Notify CEO request:', { type, data });
 
@@ -76,7 +91,7 @@ serve(async (req) => {
           `📐 <b>Size:</b> ${data.size || 'N/A'}\n` +
           `💰 <b>Price:</b> $${(data.price || 0).toFixed(2)}\n` +
           `🚚 <b>Delivery:</b> ${data.deliveryMethod || 'Standard'}\n` +
-          `📍 <b>Address:</b> ${(data.shippingAddress || '').substring(0, 50)}...\n\n` +
+          `📍 <b>Address:</b> ${data.shippingAddress ? data.shippingAddress.substring(0, 50) + '...' : 'N/A'}\n\n` +
           `⏳ <b>Status:</b> Awaiting CEO Approval\n\n` +
           `💡 Use <code>/search ${data.orderId?.slice(0, 8)}</code> for details`;
         break;
@@ -90,7 +105,7 @@ serve(async (req) => {
           `⏳ <b>Status:</b> Awaiting Verification`;
         break;
         
-      case 'order_status_change':
+      case 'order_status_change': {
         const emoji = data.newStatus === 'Delivered' ? '✅' : 
                       data.newStatus === 'Shipped' ? '🚚' :
                       data.newStatus === 'Rejected' ? '❌' : '📦';
@@ -100,6 +115,7 @@ serve(async (req) => {
           `📊 <b>New Status:</b> ${data.newStatus}\n` +
           `📊 <b>Previous:</b> ${data.previousStatus || 'N/A'}`;
         break;
+      }
         
       case 'customer_confirmed':
         message = `✅ <b>Delivery Confirmed by Customer!</b>\n\n` +
