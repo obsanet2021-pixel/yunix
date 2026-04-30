@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Chat Function</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .chat-container {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      height: 400px;
+      overflow-y: auto;
+      background: #f5f5f5;
+    }
+    .message {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .user {
+      background: #007bff;
+      color: white;
+      text-align: right;
+    }
+    .assistant {
+      background: #e9ecef;
+      color: black;
+    }
+    .input-container {
+      display: flex;
+      gap: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #d1ecf1; color: #0c5460; }
+  </style>
+</head>
+<body>
+  <h1>Test Chat Function</h1>
+  
+  <div>
+    <label for="projectUrl">Supabase Project URL:</label>
+    <input type="text" id="projectUrl" value="https://ounphbavkyrmotskydto.supabase.co" style="width: 100%; margin-bottom: 10px;">
+  </div>
+  
+  <div>
+    <label for="anonKey">Anon Key:</label>
+    <input type="text" id="anonKey" placeholder="Enter your anon key" style="width: 100%; margin-bottom: 10px;">
+  </div>
+
+  <div class="chat-container" id="chatContainer"></div>
+  
+  <div class="input-container">
+    <input type="text" id="userInput" placeholder="Type your message...">
+    <button id="sendBtn" onclick="sendMessage()">Send</button>
+  </div>
+  
+  <div id="status" class="status info">Ready to test</div>
+
+  <script>
+    const chatContainer = document.getElementById('chatContainer');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const status = document.getElementById('status');
+    const projectUrl = document.getElementById('projectUrl').value;
+    const anonKey = document.getElementById('anonKey').value;
+
+    function addMessage(role, content) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.textContent = content;
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function setStatus(type, message) {
+      status.className = `status ${type}`;
+      status.textContent = message;
+    }
+
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      const key = document.getElementById('anonKey').value;
+      if (!key) {
+        setStatus('error', 'Please enter your anon key');
+        return;
+      }
+
+      addMessage('user', message);
+      userInput.value = '';
+      sendBtn.disabled = true;
+      setStatus('info', 'Sending...');
+
+      try {
+        const response = await fetch(`${projectUrl}/functions/v1/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: message }],
+            stream: false
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          addMessage('assistant', data.response || 'No response');
+          setStatus('success', 'Success!');
+        } else {
+          addMessage('assistant', `Error: ${data.error || response.statusText}`);
+          setStatus('error', `Error: ${data.error || response.statusText}`);
+        }
+      } catch (error) {
+        addMessage('assistant', `Error: ${error.message}`);
+        setStatus('error', `Error: ${error.message}`);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>

@@ -9,7 +9,7 @@
  *   GROQ_MODEL     — optional, defaults to "llama-3.3-70b-versatile"
  */
 
-import { callGroq, callGroqWithTool, callGroqStream, type GroqMessage, type GroqFunctionDeclaration, type GroqGenerationConfig } from './groq';
+import { callGroq, callGroqWithTool, callGroqStream, type GroqMessage, type GroqFunctionDeclaration, type GroqGenerationConfig } from './groq.ts';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
