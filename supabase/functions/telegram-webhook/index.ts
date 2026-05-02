@@ -326,18 +326,22 @@ const linkAccount = async (chatId: number, userId: string, username: string, bot
   const supabase = getSupabaseClient();
   
   // Check if user exists
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, telegram_chat_id')
-    .eq('id', userId)
-    .single();
+console.log(`Link attempt: chatId=${chatId}, userId=${userId}`);
+const { data: profile, error: profileError } = await supabase
+  .from('profiles')
+  .select('id, telegram_chat_id')
+  .eq('id', userId)
+  .single();
 
-  if (profileError || !profile) {
-    return sendTelegramMessage(chatId, 
-      `❌ <b>Account not found</b>\n\nThe YUNIX account could not be found. Please make sure you're logged into YUNIX and try again.`, 
-      botToken
-    );
-  }
+console.log(`Profile query result:`, { profile, profileError });
+
+if (profileError || !profile) {
+  console.log(`Profile not found for userId: ${userId}`);
+  return sendTelegramMessage(chatId, 
+    `❌ <b>Account not found</b>\n\nThe YUNIX account could not be found. Please make sure you're logged into YUNIX and try again.`, 
+    botToken
+  );
+}
 
   // Check if already linked
   if (profile.telegram_chat_id) {
@@ -635,6 +639,20 @@ serve(async (req) => {
               const userId = param.replace('link_', '');
               await linkAccount(chatId, userId, username, botToken);
             }
+            // Handle login via OIDC: /start login
+            else if (param === 'login' || param.startsWith('login_')) {
+              await sendTelegramMessage(chatId,
+                `🔐 Login to YUNIX
+
+To sign in with Telegram, please use the web app:
+https://yunix-beta-preview.netlify.app/auth
+
+Or click "Sign in with Telegram" on the login page.
+
+Your Telegram account will be linked for faster future logins.`,
+                botToken
+              );
+            }
             else {
               // Unknown parameter
               await sendTelegramMessage(chatId,
@@ -651,7 +669,7 @@ serve(async (req) => {
           }
         } else if (text === '/help') {
           await sendTelegramMessage(chatId,
-            `🐺 <b>YUNIX Bot Commands</b>\n\n/start - Start the bot\n/link - Link your YUNIX account (use from app)\n/unlink - Disconnect your account\n/status - Check connection status\n/test - Send a test notification (5 min)\n/received CODE - Confirm order delivery\n/help - Show this help message\n\n<b>How to connect:</b>\nUse "Verify via Telegram" on the YUNIX sign-in page to link your account and receive OTP codes.\n\n<b>To confirm delivery:</b>\nWhen your order is delivered, use the confirmation code sent to you.\n\n<i>Trade Smart. Live Bold.</i>`,
+            `🐺 YUNIX Bot Commands\n\n/start - Start the bot\n/login - Sign in via Telegram (web app)\n/link - Link your YUNIX account (use from app)\n/unlink - Disconnect your account\n/status - Check connection status\n/test - Send a test notification (5 min)\n/received CODE - Confirm order delivery\n/help - Show this help message\n\nHow to connect:\nUse "Sign in with Telegram" on the YUNIX sign-in page to link your account and receive OTP codes.\n\nTo confirm delivery:\nWhen your order is delivered, use the confirmation code sent to you.\n\nTrade Smart. Live Bold.`,
             botToken
           );
         } else if (text === '/status') {
@@ -673,6 +691,16 @@ serve(async (req) => {
               botToken
             );
           }
+        } else if (text === '/login') {
+          await sendTelegramMessage(chatId,
+            `🔐 Login to YUNIX
+
+To sign in with Telegram, please use the web app:
+https://yunix-beta-preview.netlify.app/auth
+
+Or click "Sign in with Telegram" on the login page.`,
+            botToken
+          );
         } else if (text === '/unlink') {
           await unlinkAccount(chatId, botToken);
         } else if (text === '/test') {

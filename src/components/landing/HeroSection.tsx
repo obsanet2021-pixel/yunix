@@ -50,8 +50,8 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
           </ScrollReveal>
           
           <ScrollReveal direction="up" delay={100}>
-            <div className="flex items-center justify-center mx-auto" style={{ height: '280px', width: '1400px' }}>
-              <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-3 leading-[1.05] text-center w-full" style={{ marginLeft: '-400px' }}>
+            <div className="flex items-center justify-center mx-auto h-auto w-full max-w-[1400px]">
+              <h1 className="font-display text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold tracking-tight mb-3 leading-[1.05] text-center w-full">
                 <span className="flex flex-col items-center justify-center">
                   <span className="text-center">The Journal That</span>
                   <span className="gradient-text text-center">Funded Traders</span>
@@ -104,8 +104,8 @@ export default function HeroSection({ userCount }: HeroSectionProps) {
         </div>
 
         {/* Dashboard Mockup */}
-        <ScrollReveal direction="up" delay={500} className="mt-20 lg:mt-24">
-          <div className="relative max-w-6xl mx-auto">
+        <ScrollReveal direction="up" delay={500} className="mt-12 sm:mt-16 lg:mt-20 xl:mt-24">
+          <div className="relative max-w-[95vw] sm:max-w-[90vw] lg:max-w-6xl mx-auto scale-[0.85] sm:scale-90 md:scale-95 lg:scale-100 origin-top">
             <DashboardMockup />
           </div>
         </ScrollReveal>

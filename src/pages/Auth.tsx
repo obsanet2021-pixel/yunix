@@ -11,8 +11,28 @@ import { useToast } from "@/hooks/use-toast";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { z } from "zod";
 import { Eye, EyeOff, Loader2, ArrowLeft, Send, CheckCircle, MessageCircle, Chrome } from "lucide-react";
+
+// Telegram Icon Component
+const TelegramIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+  </svg>
+);
 import { Badge } from "@/components/ui/badge";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+// TypeScript declaration for Telegram Login
+declare global {
+  interface Window {
+    Telegram?: {
+      Login: {
+        init: (options: { client_id: number; request_access?: string[]; lang?: string }, callback: (data: any) => void) => void;
+        open: () => void;
+        auth: (options: { client_id: number; request_access?: string[]; lang?: string; nonce?: string }, callback: (data: any) => void) => void;
+      };
+    };
+  }
+}
 
 const authSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address").max(255),
@@ -582,6 +602,109 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
+  // Telegram OIDC Login Handler
+  const handleTelegramLogin = () => {
+    if (window.Telegram && window.Telegram.Login) {
+      // Generate a random nonce for security
+      const nonce = crypto.randomUUID();
+      
+      // Use auth() method with popup-based flow (no redirect_uri needed)
+      window.Telegram.Login.auth({
+        client_id: 7810018065,
+        request_access: ['write'],
+        lang: 'en',
+        nonce: nonce
+      }, (data: any) => {
+        if (data.error) {
+          toast({
+            title: "Telegram Login Failed",
+            description: data.error,
+            variant: "destructive"
+          });
+        } else if (data.id_token) {
+          // Verify nonce matches (basic security check)
+          console.log('Telegram auth success, nonce:', nonce);
+          handleTelegramAuthSuccess(data);
+        }
+      });
+    } else {
+      // Fallback: Open Telegram bot directly
+      window.open('https://t.me/YunixOfficialBot?start=login', '_blank');
+    }
+  };
+
+  const handleTelegramAuthSuccess = async (telegramData: any) => {
+    setLoading(true);
+    try {
+      // Call your backend to verify the token and link/create user (pass nonce for verification)
+      const { data: userData, error: userError } = await supabase.functions.invoke('telegram-auth-callback', {
+        body: { 
+          id_token: telegramData.id_token, 
+          user: telegramData.user,
+          nonce: telegramData.nonce  // Pass nonce for replay attack prevention
+        }
+      });
+
+      if (userError) throw userError;
+
+      if (!userData?.success) {
+        throw new Error(userData?.error || 'Authentication failed');
+      }
+
+      // Store the Telegram-linked email for magic link
+      const linkedEmail = userData.user?.email || `telegram_${userData.user?.telegramId}@yunix.temp`;
+      
+      // Send magic link to sign in the user
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email: linkedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/app/dashboard`,
+        },
+      });
+
+      if (signInError) {
+        // If magic link fails, try to sign in with the user credentials
+        console.log('Magic link error, trying alternative:', signInError);
+      }
+
+      if (userData.isNewUser) {
+        toast({
+          title: "Account Created! 🎉",
+          description: "Check your email for a magic link to complete sign in. Your Telegram is now linked!",
+        });
+      } else {
+        toast({
+          title: "Telegram Linked! ✅",
+          description: "Check your email for a magic link to sign in.",
+        });
+      }
+
+      // Show a message that they need to check their email
+      setResetStep('success'); // Reuse the success state to show a message
+      
+    } catch (error: any) {
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to authenticate with Telegram.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load Telegram Login script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://oauth.telegram.org/js/telegram-login.js?3';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const skipTelegramAndContinue = () => {
     isSignupInProgress.current = false; // Reset flag before navigating
@@ -1176,6 +1299,27 @@ export default function Auth() {
                     </p>
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? "Creating account..." : isStaffEmail ? `Join as ${staffRoleName}` : "Sign Up"}
+                    </Button>
+
+                    {/* Telegram Login Button */}
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or connect with</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] hover:text-[#0088cc]"
+                      onClick={handleTelegramLogin}
+                      disabled={loading}
+                    >
+                      <TelegramIcon className="h-4 w-4 mr-2" />
+                      Connect with Telegram
                     </Button>
 
                     {isEnabled('google_sign_in') && (

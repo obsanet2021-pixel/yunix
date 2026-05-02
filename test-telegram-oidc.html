@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram OIDC Login Test - YUNIX</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .warning strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #856404;
+        }
+        .warning.error {
+            background: #fee2e2;
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+        .warning.error strong {
+            color: #dc2626;
+        }
+        .warning.success {
+            background: #dcfce7;
+            border-color: #22c55e;
+            color: #16a34a;
+        }
+        .info {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .info strong {
+            color: #1565c0;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+        }
+        .test-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        button {
+            background: #0088cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+            margin: 5px;
+        }
+        button:hover {
+            background: #006699;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        .result {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        .result.visible {
+            display: block;
+        }
+        .result h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .result pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .error.visible {
+            display: block;
+        }
+        .steps {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .steps h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .steps ol {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #555;
+        }
+        .steps code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+        }
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            position: relative;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Telegram OIDC Login Test</h1>
+        <p>Testing Telegram OpenID Connect integration for YUNIX.</p>
+        
+        <div class="warning" id="urlWarning">
+            <strong>⚠️ Method 1 (OIDC) Will NOT Work Here</strong>
+            Telegram OIDC requires:
+            <ol style="margin: 10px 0; padding-left: 20px;">
+                <li><strong>HTTPS</strong> (not HTTP)</li>
+                <li><strong>Registered domain</strong> with @BotFather under <em>Bot Settings > Web Login</em></li>
+            </ol>
+            <strong>Current URL:</strong> <span id="currentUrl"></span>
+            <br>
+            <strong>Status:</strong> <span id="urlStatus">Checking...</span>
+            <br><br>
+            <strong>✅ Solution:</strong> Use <em>"Method 2: Direct Bot Link"</em> below for testing, or deploy this page to your registered domain.
+        </div>
+
+        <div class="info">
+            <strong>Bot:</strong> YunixOfficialBot<br>
+            <strong>Client ID:</strong> 7810018065<br>
+            <strong>Flow:</strong> Authorization Code with PKCE (popup)
+        </div>
+
+        <div class="steps">
+            <h3>📋 Setup Steps (Required)</h3>
+            <ol>
+                <li>Open <strong>@BotFather</strong> in Telegram</li>
+                <li>Select your bot: <code>YunixOfficialBot</code></li>
+                <li>Go to <strong>Bot Settings</strong> → <strong>Web Login</strong></li>
+                <li>Add Allowed URL: <code id="allowedUrl">...</code></li>
+                <li>Copy the <strong>Client Secret</strong> for the Edge Function</li>
+            </ol>
+        </div>
+
+        <!-- Test Method 1: OIDC Popup Flow -->
+        <div class="test-section">
+            <h2>Method 1: OIDC Popup Flow (postMessage)</h2>
+            <p>Uses Telegram's JavaScript SDK with popup-based authentication.</p>
+            <button id="oidcLoginBtn" onclick="startOIDCLogin()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                Sign in with Telegram (OIDC)
+            </button>
+            <button class="secondary" onclick="loadTelegramScript()">
+                Load Telegram Script
+            </button>
+        </div>
+
+        <div class="divider"><span>OR</span></div>
+
+        <!-- Test Method 2: Direct Link -->
+        <div class="test-section">
+            <h2>Method 2: Direct Bot Link (Fallback)</h2>
+            <p>Open the bot directly and use the /start command.</p>
+            <button class="secondary" onclick="openBotDirectly()">
+                Open @YunixOfficialBot
+            </button>
+        </div>
+
+        <div id="result" class="result">
+            <h3>✅ Authentication Data</h3>
+            <pre id="resultData"></pre>
+        </div>
+
+        <div id="error" class="error">
+            <strong>❌ Error:</strong> <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <!-- Load Telegram Login Script -->
+    <script src="https://oauth.telegram.org/js/telegram-login.js?3" async></script>
+
+    <script>
+        const CLIENT_ID = '7810018065';
+        let telegramScriptLoaded = false;
+
+        // Display current URL
+        document.getElementById('currentUrl').textContent = window.location.origin;
+        document.getElementById('allowedUrl').textContent = window.location.origin;
+
+        // Check if URL is valid for OIDC
+        const warningEl = document.getElementById('urlWarning');
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.getElementById('urlStatus').textContent = '❌ Localhost - OIDC will fail. Use Method 2 below.';
+            document.getElementById('urlStatus').style.color = '#dc2626';
+            warningEl.classList.add('error');
+        } else if (window.location.protocol !== 'https:') {
+            document.getElementById('urlStatus').textContent = '⚠️ Not HTTPS - OIDC requires HTTPS';
+            document.getElementById('urlStatus').style.color = '#f59e0b';
+            warningEl.classList.add('error');
+        } else {
+            document.getElementById('urlStatus').textContent = '✓ HTTPS domain - Must still be registered with @BotFather for OIDC to work';
+            document.getElementById('urlStatus').style.color = '#16a34a';
+            warningEl.classList.remove('error');
+            warningEl.classList.add('success');
+            warningEl.querySelector('strong').textContent = '✓ HTTPS Domain Detected';
+        }
+
+        // Load Telegram Script
+        function loadTelegramScript() {
+            if (telegramScriptLoaded) {
+                alert('Telegram script already loaded!');
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://oauth.telegram.org/js/telegram-login.js?3';
+            script.async = true;
+            script.onload = () => {
+                telegramScriptLoaded = true;
+                console.log('Telegram Login script loaded');
+                alert('Telegram Login script loaded successfully!');
+            };
+            script.onerror = () => {
+                showError('Failed to load Telegram Login script');
+            };
+            document.body.appendChild(script);
+        }
+
+        // Generate PKCE code verifier and challenge
+        function generatePKCE() {
+            const codeVerifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => ('0' + b.toString(16)).slice(-2))
+                .join('');
+            
+            // For simplicity, we'll use plain code_challenge_method
+            // In production, use S256 (SHA256 hash of code_verifier)
+            return {
+                codeVerifier,
+                codeChallenge: codeVerifier, // Simplified - should be base64url(SHA256(codeVerifier))
+                method: 'plain'
+            };
+        }
+
+        // Start OIDC Login Flow
+        function startOIDCLogin() {
+            if (!window.Telegram || !window.Telegram.Login) {
+                showError('Telegram Login script not loaded. Click "Load Telegram Script" first.');
+                return;
+            }
+
+            // Check if URL is valid for OIDC
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isHttps = window.location.protocol === 'https:';
+            
+            if (isLocalhost) {
+                showError('❌ OIDC requires a registered HTTPS domain (not localhost).\\n\\n' +
+                    'To test OIDC:\\n' +
+                    '1. Deploy this page to your domain (e.g., yunix-beta-preview.netlify.app)\\n' +
+                    '2. Register that domain with @BotFather\\n' +
+                    '3. Then try again\\n\\n' +
+                    'Use "Method 2: Direct Bot Link" for local testing.');
+                return;
+            }
+
+            if (!isHttps) {
+                showError('❌ OIDC requires HTTPS. Please access this page via HTTPS.');
+                return;
+            }
+
+            // Show warning about domain registration
+            if (!confirm('⚠️ IMPORTANT:\\n\\nThis domain (' + window.location.origin + ') MUST be registered with @BotFather under Bot Settings > Web Login.\\n\\nIf it\'s not registered, the popup will show "redirect_uri required" error.\\n\\nContinue anyway?')) {
+                return;
+            }
+
+            // Generate nonce for security
+            const nonce = crypto.randomUUID();
+            
+            console.log('Starting OIDC login with nonce:', nonce);
+            console.log('Current domain:', window.location.origin);
+
+            // Use the auth() method which opens a popup
+            // This should use postMessage instead of redirect
+            try {
+                window.Telegram.Login.auth({
+                    client_id: parseInt(CLIENT_ID),
+                    request_access: ['write'],
+                    lang: 'en',
+                    nonce: nonce
+                }, function(result) {
+                    console.log('Telegram auth result:', result);
+                    
+                    if (result.error) {
+                        // Provide more context for common errors
+                        let errorMsg = result.error;
+                        if (result.error.includes('redirect_uri') || result.error.includes('redirect_uri_required')) {
+                            errorMsg = result.error + '\\n\\nThis domain is not registered with @BotFather.\\nPlease add "' + window.location.origin + '" to your bot\'s Web Login settings.';
+                        }
+                        showError(errorMsg);
+                    } else if (result.id_token) {
+                        handleSuccess(result);
+                    }
+                });
+            } catch (err) {
+                showError('Error starting Telegram auth: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        // Handle successful authentication
+        function handleSuccess(data) {
+            document.getElementById('result').classList.add('visible');
+            document.getElementById('resultData').textContent = JSON.stringify(data, null, 2);
+            
+            console.log('Authentication successful:', data);
+            
+            // The data should contain:
+            // - id_token: JWT token
+            // - user: User info (decoded from id_token)
+            // - nonce: The nonce we sent (should match)
+            
+            alert('✅ Login successful!\n\nCheck the result section below.\n\nNext step: Send the id_token to your Edge Function (telegram-auth-callback) to verify and create/link the user account.');
+        }
+
+        // Show error
+        function showError(message) {
+            document.getElementById('error').classList.add('visible');
+            document.getElementById('errorMessage').textContent = message;
+            console.error('Telegram Login Error:', message);
+        }
+
+        // Open bot directly (fallback)
+        function openBotDirectly() {
+            window.open('https://t.me/YunixOfficialBot?start=login', '_blank');
+        }
+
+        // Listen for postMessage from Telegram
+        window.addEventListener('message', function(event) {
+            console.log('Received message from:', event.origin, event.data);
+            
+            if (event.origin === 'https://oauth.telegram.org') {
+                if (event.data && event.data.event === 'auth_result') {
+                    handleSuccess(event.data.result);
+                } else if (event.data && event.data.error) {
+                    showError(event.data.error);
+                }
+            }
+        });
+
+        // Auto-load script on page load
+        window.addEventListener('load', () => {
+            // Script is already loaded via script tag above
+            telegramScriptLoaded = true;
+            console.log('Page loaded, Telegram script should be available');
+        });
+    </script>
+</body>
+</html>

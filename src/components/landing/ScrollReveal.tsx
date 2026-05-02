@@ -43,16 +43,18 @@ export default function ScrollReveal({
 
   const getInitialTransform = () => {
     const parallax = parallaxOffset > 0 ? scrollProgress * parallaxOffset : 0;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    const translateAmount = isMobile ? 30 : 60;
     switch (direction) {
-      case 'up': return `translateY(${60 + parallax}px)`;
-      case 'down': return `translateY(${-60 + parallax}px)`;
-      case 'left': return `translateX(${60 + parallax}px)`;
-      case 'right': return `translateX(${-60 + parallax}px)`;
+      case 'up': return `translateY(${translateAmount + parallax}px)`;
+      case 'down': return `translateY(${-translateAmount + parallax}px)`;
+      case 'left': return `translateX(${translateAmount + parallax}px)`;
+      case 'right': return `translateX(${-translateAmount + parallax}px)`;
       case 'scale': return 'scale(0.9)';
       case 'fade': return 'translateY(0)';
       case 'rotate': return 'rotate(-10deg) translateY(20px)';
       case 'flip': return 'rotateX(90deg)';
-      default: return `translateY(${60 + parallax}px)`;
+      default: return `translateY(${translateAmount + parallax}px)`;
     }
   };
 

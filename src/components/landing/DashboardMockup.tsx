@@ -59,26 +59,26 @@ export default function DashboardMockup() {
 
           {/* Forex Ticker */}
           <div className="bg-card border border-border rounded-xl p-3 overflow-hidden">
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-4 text-xs overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="font-mono font-semibold text-foreground">EUR/USD</span>
                 <span className="font-mono text-green-500">1.0854 ▲</span>
                 <span className="text-[10px] text-muted-foreground">+0.12%</span>
               </div>
-              <div className="w-px h-4 bg-border" />
-              <div className="flex items-center gap-1.5">
+              <div className="w-px h-4 bg-border shrink-0" />
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="font-mono font-semibold text-foreground">USD/JPY</span>
                 <span className="font-mono text-red-500">149.72 ▼</span>
                 <span className="text-[10px] text-muted-foreground">-0.08%</span>
               </div>
-              <div className="w-px h-4 bg-border" />
-              <div className="flex items-center gap-1.5">
+              <div className="w-px h-4 bg-border shrink-0" />
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="font-mono font-semibold text-foreground">XAU/USD</span>
                 <span className="font-mono text-green-500">2,685.80 ▲</span>
                 <span className="text-[10px] text-muted-foreground">+0.46%</span>
               </div>
-              <div className="w-px h-4 bg-border" />
-              <div className="flex items-center gap-1.5">
+              <div className="w-px h-4 bg-border shrink-0" />
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="font-mono font-semibold text-foreground">NAS100</span>
                 <span className="font-mono text-green-500">19,842 ▲</span>
                 <span className="text-[10px] text-muted-foreground">+0.82%</span>
@@ -87,7 +87,7 @@ export default function DashboardMockup() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard 
               title="Total PnL" 
               value="+$4,827.50" 
@@ -113,9 +113,9 @@ export default function DashboardMockup() {
           </div>
 
           {/* Chart + Economic Calendar Row */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Performance Chart */}
-            <div className="col-span-2 bg-card border border-border rounded-xl p-4">
+            <div className="sm:col-span-2 bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold">Recent Performance</h3>
                 <span className="text-xs text-muted-foreground">Last 7 days</span>
@@ -179,7 +179,7 @@ export default function DashboardMockup() {
               <h3 className="text-sm font-semibold">Prop Firms Overview</h3>
               <span className="text-xs text-muted-foreground">3 accounts</span>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <PropFirmCard 
                 name="FTMO" 
                 type="Funded"
