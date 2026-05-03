@@ -50,12 +50,21 @@ export function MonthlyCardScreenshot({
         html2canvas = module.default || module;
         setHtml2canvasLoaded(true);
       } catch (error) {
-        console.error('Failed to load html2canvas:', error);
-        toast({ 
-          title: "Library not loaded", 
-          description: "Please run 'npm install' to enable screenshot functionality.", 
-          variant: "destructive" 
-        });
+        console.log('Local html2canvas not found, trying CDN...');
+        // Try loading from CDN as fallback
+        try {
+          const cdnModule = await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js');
+          html2canvas = cdnModule.default || cdnModule;
+          setHtml2canvasLoaded(true);
+          console.log('Loaded html2canvas from CDN');
+        } catch (cdnError) {
+          console.error('Failed to load html2canvas from CDN:', cdnError);
+          toast({ 
+            title: "Screenshot unavailable", 
+            description: "Could not load screenshot library. Please check your internet connection.", 
+            variant: "destructive" 
+          });
+        }
       }
     };
     loadHtml2Canvas();
