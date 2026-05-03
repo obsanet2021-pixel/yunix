@@ -56,6 +56,7 @@ interface ExtractedTradeData {
   pips?: number;
   gain?: number;
   session?: string;
+  notes?: string;
 }
 
 type TimezoneOption = "Europe/London" | "America/New_York";
@@ -442,14 +443,45 @@ export default function AIChat() {
     if (file) processImage(file);
   };
 
-  const processImage = (file: File) => {
+  const processImage = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       toast({ title: "Invalid file", description: "Please upload an image file.", variant: "destructive" });
       return;
     }
     setUploadedImage(file);
     const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.onload = async (e) => {
+      const imageData = e.target?.result as string;
+      setImagePreview(imageData);
+      
+      // Auto-extract trades from image
+      console.log("🖼️ Image uploaded, auto-extracting trades...");
+      const trades = await extractTradesFromImage(imageData);
+      
+      if (trades.length > 0) {
+        setExtractedTrades(trades);
+        const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
+        
+        // Add system message about extraction
+        const extractionMessage: Message = {
+          role: "assistant",
+          content: `📊 **Extracted ${trades.length} Trade${trades.length > 1 ? 's' : ''}!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the trades below and click "Save All Trades" to add them to your journal! 👇`,
+          extractedTrades: trades
+        };
+        setMessages(prev => [...prev, extractionMessage]);
+        
+        toast({
+          title: "Trades Extracted!",
+          description: `Found ${trades.length} trades. Review and save them below.`,
+        });
+      } else {
+        // No trades found - let user know they can still chat about the image
+        toast({
+          title: "No Trades Found",
+          description: "Could not extract trades from this image. You can still chat with AI about it!",
+        });
+      }
+    };
     reader.readAsDataURL(file);
   };
 
@@ -483,18 +515,69 @@ export default function AIChat() {
     setIsExtracting(true);
     try {
       const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+      
+      // Validate image size
+      const imageSizeKB = Math.round(base64Data.length * 0.75 / 1024);
+      console.log(`Image size: ${imageSizeKB} KB, base64 length: ${base64Data.length}`);
+      
+      if (imageSizeKB > 5000) { // 5MB limit
+        toast({
+          title: "Image Too Large",
+          description: "Please upload an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return [];
+      }
+      
+      console.log("📤 Sending image to extract-trade function...");
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-trade`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY}` 
+        },
         body: JSON.stringify({ imageBase64: base64Data })
       });
-      if (!response.ok) throw new Error("Failed to extract trades");
+      
+      console.log("📥 Extract-trade response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Extract trades HTTP error:", response.status, errorData);
+        
+        // Show specific error message
+        const errorMessage = errorData.details || errorData.error || `Server error (${response.status})`;
+        toast({
+          title: "Extraction Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return [];
+      }
+      
       const data = await response.json();
-      if (data.success && data.trades?.length > 0) return data.trades as ExtractedTradeData[];
-      if (data.success && data.trade) return [data.trade as ExtractedTradeData];
+      console.log("Extract trades response:", data);
+      
+      if (data.success && data.trades?.length > 0) {
+        console.log(`✅ Extracted ${data.trades.length} trades via ${data.source || 'unknown'}`);
+        return data.trades as ExtractedTradeData[];
+      }
+      
+      if (data.success && data.trade) {
+        return [data.trade as ExtractedTradeData];
+      }
+      
+      // No trades found but request succeeded
+      console.log("ℹ️ No trades found in image");
       return [];
+      
     } catch (error) {
       console.error("Extract trades error:", error);
+      toast({
+        title: "Extraction Error",
+        description: error instanceof Error ? error.message : "Failed to analyze image. Please try again.",
+        variant: "destructive",
+      });
       return [];
     } finally {
       setIsExtracting(false);
@@ -577,6 +660,7 @@ export default function AIChat() {
         trade_date: parseTradeDate(trade.trade_date),
         session: getSessionFromTime(trade.open_time, screenshotTimezone),
         screenshot_url: screenshotUrl,
+        notes: trade.notes || null,
       }));
 
       const { error: insertError } = await supabase.from("trades").insert(tradesToInsert);
@@ -622,8 +706,8 @@ export default function AIChat() {
     if (conversationId) await saveMessage(userMessage, conversationId);
 
     try {
-      // If image with no text input, try extraction first
-      if (imagePreview && !input.trim()) {
+      // If image is present, try extraction first (regardless of text input)
+      if (imagePreview) {
         const trades = await extractTradesFromImage(imagePreview);
         if (trades.length > 0) {
           setExtractedTrades(trades);
@@ -639,7 +723,10 @@ export default function AIChat() {
           setIsLoading(false);
           return;
         }
-        // If extraction fails, fall through to AI chat with image
+        // If extraction fails or no trades found, add extraction context to message for AI chat
+        userMessage.content = input.trim() ? `${input}\n\n[User also shared an image - extraction found no trades]` : "Analyze this trade image";
+        // Ensure image is preserved in the message for AI analysis
+        userMessage.image = imagePreview;
       }
 
       // Build deep context + strategy rules
@@ -647,17 +734,33 @@ export default function AIChat() {
       const activeRules = strategyRules.filter(r => r.is_active).map(r => r.rule_text);
 
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      
+      // Prepare messages without image data for cleaner JSON
+      const chatMessages = [...messages.map(m => ({ role: m.role, content: m.content })), 
+        { role: userMessage.role, content: userMessage.content }];
+      
+      // Send image as separate imageBase64 parameter if present
+      const requestBody: any = {
+        messages: chatMessages,
+        traderContext,
+        strategyRules: activeRules.length > 0 ? activeRules : undefined,
+      };
+      
+      if (userMessage.image) {
+        const imageBase64 = userMessage.image.startsWith("data:") 
+          ? userMessage.image.split(",")[1] 
+          : userMessage.image;
+        requestBody.imageBase64 = imageBase64;
+        console.log("Sending image to AI chat, length:", imageBase64?.length);
+      }
+      
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({
-          messages: [...messages.map(m => ({ role: m.role, content: m.content, image: m.image })), userMessage],
-          traderContext,
-          strategyRules: activeRules.length > 0 ? activeRules : undefined,
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (response.status === 429) {

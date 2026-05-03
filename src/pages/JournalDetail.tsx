@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, X, Play, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Upload, X, Play, TrendingUp, TrendingDown, AlertTriangle, Star, Save } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { getEmotionTagStyle, getMistakeTagLabel, EMOTION_TAGS } from "@/lib/tradeCalculations";
-import TraderAssistPanel from "@/components/TraderAssistPanel";
 
 interface Trade {
   id: string;
@@ -49,6 +50,11 @@ export default function JournalDetail() {
   const [uploading, setUploading] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [rating, setRating] = useState(0);
+  const [satisfaction, setSatisfaction] = useState(50);
+  const [confidence, setConfidence] = useState(50);
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     fetchTradeDetails();
@@ -86,21 +92,24 @@ export default function JournalDetail() {
       return;
     }
 
-    setTrade(data);
-    
-    // Set screenshots from either new array or legacy single screenshot
-    const existingScreenshots = data.screenshots || (data.screenshot_url ? [data.screenshot_url] : []);
-    setScreenshots(existingScreenshots);
+    if (data) {
+      setTrade(data);
+      setScreenshots(data.screenshots || []);
+      setNotes(data.notes || "");
+      setRating(data.rating || 0);
+      setSatisfaction(data.satisfaction || 50);
+      setConfidence(data.confidence || 50);
 
-    if (data.prop_firm_id) {
-      const { data: propFirm } = await supabase
-        .from("prop_firms")
-        .select("name")
-        .eq("id", data.prop_firm_id)
-        .maybeSingle();
-
-      if (propFirm) {
-        setPropFirmName(propFirm.name);
+      // Load prop firm name
+      if (data.prop_firm_id) {
+        const { data: propFirmData } = await supabase
+          .from("prop_firms")
+          .select("name")
+          .eq("id", data.prop_firm_id)
+          .single();
+        if (propFirmData) {
+          setPropFirmName(propFirmData.name);
+        }
       }
     }
   };
@@ -174,6 +183,37 @@ export default function JournalDetail() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) await processFiles(files);
+  };
+
+  const saveNotesRating = async () => {
+    if (!id) return;
+    setSavingNotes(true);
+    try {
+      const { error } = await supabase
+        .from("trades")
+        .update({
+          notes,
+          rating,
+          satisfaction,
+          confidence,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Saved",
+        description: "Trade review updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save review",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNotes(false);
+    }
   };
 
   // Drag and drop handlers
@@ -420,12 +460,94 @@ export default function JournalDetail() {
         </CardContent>
       </Card>
 
-      {/* Trader Assist AI */}
-      <TraderAssistPanel
-        trade={trade}
-        screenshots={screenshots}
-        propFirmName={propFirmName}
-      />
+      {/* Trade Review Section */}
+      <Card className="glow-card">
+        <CardHeader>
+          <CardTitle>Trade Review</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes & Reflections</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="What did you learn from this trade? What went well? What could be improved?"
+              rows={4}
+            />
+          </div>
+
+          {/* 5-Star Rating */}
+          <div className="space-y-2">
+            <Label>Trade Rating</Label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  className="p-1 hover:scale-110 transition-transform"
+                >
+                  <Star
+                    className={`h-8 w-8 ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`}
+                  />
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-muted-foreground">
+                {rating > 0 ? `${rating} star${rating > 1 ? 's' : ''}` : 'Click to rate'}
+              </span>
+            </div>
+          </div>
+
+          {/* Satisfaction & Confidence Bars */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label>Satisfaction Level</Label>
+                <span className="text-sm text-muted-foreground">{satisfaction}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={satisfaction}
+                onChange={(e) => setSatisfaction(Number(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Disappointed</span>
+                <span>Satisfied</span>
+                <span>Thrilled</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label>Confidence Level</Label>
+                <span className="text-sm text-muted-foreground">{confidence}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={confidence}
+                onChange={(e) => setConfidence(Number(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Doubtful</span>
+                <span>Confident</span>
+                <span>Very Confident</span>
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={saveNotesRating} disabled={savingNotes} className="w-full">
+            <Save className="h-4 w-4 mr-2" />
+            {savingNotes ? "Saving..." : "Save Review"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Media Section */}
       <Card 

@@ -9,6 +9,9 @@ import {
   type GeminiGenerationConfig,
 } from "../shared/gemini.ts";
 
+// Import Groq for vision fallback since Gemini vision has issues
+import { callGroq, type GroqMessage } from "../shared/groq.ts";
+
 serve(safeHandler(async (req) => {
   const { messages = [], stream = true, imageBase64, traderContext, strategyRules } = await req.json();
 
@@ -85,36 +88,101 @@ RULES:
 - If you don't have enough context, ask for it rather than guessing
 - Be honest about uncertainty — "I'm not sure" is better than wrong advice${strategySection}${traderProfileSection}`;
 
-  // Build Gemini contents array from conversation history
+  // Check if there's an image in the request
+  const hasImage = imageBase64 || messages.some((msg: any) => msg.image);
+
+  // If there's an image, use Groq with vision capability (llama-3.2-90b-vision-preview)
+  if (hasImage) {
+    console.log("🖼️ Image detected, using Groq Vision API for better image analysis");
+    
+    // Build Groq messages
+    const groqMessages: GroqMessage[] = [];
+    
+    // Add system message
+    groqMessages.push({
+      role: "system",
+      content: systemPrompt,
+    });
+
+    // Add conversation history
+    for (const msg of messages) {
+      const role = msg.role === "assistant" ? "assistant" : "user";
+      
+      if (msg.image) {
+        // Image in message history
+        const imageData = msg.image.startsWith("data:") ? msg.image : `data:image/png;base64,${msg.image}`;
+        groqMessages.push({
+          role: role as "user" | "assistant",
+          content: [
+            { type: "text", text: msg.content || "Analyze this image" },
+            { type: "image_url", image_url: { url: imageData } }
+          ]
+        });
+      } else {
+        // Text-only message
+        groqMessages.push({
+          role: role as "user" | "assistant",
+          content: msg.content || "",
+        });
+      }
+    }
+
+    // Add separate imageBase64 if provided
+    if (imageBase64 && !messages.some((msg: any) => msg.image)) {
+      const imageData = imageBase64.startsWith("data:") ? imageBase64 : `data:image/png;base64,${imageBase64}`;
+      groqMessages.push({
+        role: "user",
+        content: [
+          { type: "text", text: "Analyze this trading screenshot." },
+          { type: "image_url", image_url: { url: imageData } }
+        ]
+      });
+    }
+
+    try {
+      // Use Groq vision model
+      const response = await callGroq(groqMessages, {
+        generationConfig: {
+          temperature: 0.2,
+          max_tokens: 2048,
+        },
+        model: "llama-3.2-90b-vision-preview", // Vision-capable model
+      });
+
+      if (stream) {
+        // For streaming, convert the response to SSE format
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: response })}\n\n`));
+            controller.close();
+          }
+        });
+
+        return new Response(readable, {
+          headers: { ...CORS_HEADERS, "Content-Type": "text/event-stream" },
+        });
+      }
+
+      return jsonResp({ response: response || "No response generated" });
+    } catch (error) {
+      console.error("❌ Groq Vision API error:", error);
+      // Fall back to text-only response
+      return jsonResp({ 
+        response: "I'm having trouble analyzing the image right now. Please try uploading it again, or describe what you see and I'll help analyze it! 📸",
+        error: "Image analysis temporarily unavailable"
+      });
+    }
+  }
+
+  // No image - use regular Gemini text API
   const contents: GeminiContent[] = [];
   for (const msg of messages) {
     const role: "user" | "model" = msg.role === "assistant" ? "model" : "user";
-    const parts: any[] = [];
-
-    let text = msg.content ?? "";
-    if (msg.image) {
-      // Add image as inlineData part
-      const base64 = msg.image.startsWith("data:")
-        ? msg.image.split(",")[1]
-        : msg.image;
-      parts.push({ inlineData: { mimeType: "image/png", data: base64 } });
-    }
-
-    parts.unshift({ text });
-    contents.push({ role, parts });
-  }
-
-  // If imageBase64 is provided separately, append to last user message or create one
-  if (imageBase64) {
-    const lastMsg = contents[contents.length - 1];
-    if (lastMsg && lastMsg.role === "user") {
-      lastMsg.parts.push({ inlineData: { mimeType: "image/png", data: imageBase64 } });
-    } else {
-      contents.push({
-        role: "user",
-        parts: [{ text: "Analyze this image." }, { inlineData: { mimeType: "image/png", data: imageBase64 } }],
-      });
-    }
+    contents.push({ 
+      role, 
+      parts: [{ text: msg.content ?? "" }] 
+    });
   }
 
   // Ensure at least one user message exists

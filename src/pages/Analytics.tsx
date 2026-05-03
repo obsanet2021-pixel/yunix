@@ -7,7 +7,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { TrendingUp, TrendingDown, Target, Percent, Calendar as CalendarIcon, ChevronLeft, ChevronRight, RotateCcw, Radio, Zap, AlertTriangle, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Percent, Calendar as CalendarIcon, ChevronLeft, ChevronRight, RotateCcw, Radio, Zap, AlertTriangle, DollarSign, Camera, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +21,7 @@ import {
   calculateMistakeCost, countMistakesByType, getLossByMistakeType, getMistakeTagLabel,
   type TradeWithPricing 
 } from "@/lib/tradeCalculations";
+import { MonthlyCardScreenshot } from "@/components/MonthlyCardScreenshot";
 
 interface Trade {
   id: string; pair: string; profit: number; session: string | null; emotion: string | null;
@@ -252,7 +253,9 @@ export default function Analytics() {
 
   const weeklyData = (() => {
     const weeks: Array<{ weekNumber: number; startDate: Date; endDate: Date; totalPnL: number; tradingDays: number }> = [];
-    for (let i = 0; i < dailyStats.length; i += 7) {
+    // Limit to 4 weeks
+    const maxDays = 28;
+    for (let i = 0; i < Math.min(dailyStats.length, maxDays); i += 7) {
       const weekDays = dailyStats.slice(i, i + 7);
       if (weekDays.length === 0) continue;
       const tradingDaysInWeek = weekDays.filter(d => d.hasTrades && isSameMonth(d.day, currentMonth));
@@ -263,6 +266,23 @@ export default function Analytics() {
     }
     return weeks;
   })();
+
+  // Get user's invitation code
+  const [invitationCode, setInvitationCode] = useState<string>("");
+  useEffect(() => {
+    const loadInvitationCode = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from("profiles").select("invite_code").eq("id", user.id).single();
+        if (profile?.invite_code) {
+          setInvitationCode(profile.invite_code);
+        }
+      }
+    };
+    loadInvitationCode();
+  }, []);
+
+  // Screenshot sharing is now handled by MonthlyCardScreenshot component
 
   // Equity from funded accounts
   const fundedAccounts = propFirms.filter(f => f.account_type === 'Funded');
@@ -371,6 +391,41 @@ export default function Analytics() {
                 Calendar
               </CardTitle>
               <div className="flex items-center gap-1">
+                <MonthlyCardScreenshot
+                  currentMonth={currentMonth}
+                  totalTrades={totalTrades}
+                  winningTrades={winningTrades.length}
+                  losingTrades={losingTrades.length}
+                  winRate={winRate}
+                  totalProfit={totalProfit}
+                  totalTradingDays={totalTradingDays}
+                  invitationCode={invitationCode}
+                >
+                  <div className="grid grid-cols-7 gap-0.5 mb-1">
+                    {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                      <div key={i} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-0.5">
+                    {dailyStats.map((stat, index) => {
+                      const isCurrentMonth = isSameMonth(stat.day, currentMonth);
+                      return (
+                        <div
+                          key={index}
+                          className={`
+                            aspect-square rounded flex items-center justify-center text-[9px] font-medium
+                            ${!isCurrentMonth ? 'opacity-20' : ''}
+                            ${stat.hasTrades && stat.totalProfit > 0 ? 'bg-green-500/20 text-green-500' : ''}
+                            ${stat.hasTrades && stat.totalProfit < 0 ? 'bg-red-500/20 text-red-500' : ''}
+                            ${!stat.hasTrades ? 'text-muted-foreground' : ''}
+                          `}
+                        >
+                          {format(stat.day, "d")}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </MonthlyCardScreenshot>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -588,9 +643,53 @@ export default function Analytics() {
         <Card className="glow-card lg:col-span-2">
           <CardHeader className="px-3 sm:px-4 py-3">
             <div className="flex flex-col gap-3">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <CalendarIcon className="h-4 w-4 text-primary" />Monthly Calendar
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <CalendarIcon className="h-4 w-4 text-primary" />Monthly Calendar
+                </CardTitle>
+                <MonthlyCardScreenshot
+                  currentMonth={currentMonth}
+                  totalTrades={totalTrades}
+                  winningTrades={winningTrades.length}
+                  losingTrades={losingTrades.length}
+                  winRate={winRate}
+                  totalProfit={totalProfit}
+                  totalTradingDays={totalTradingDays}
+                  invitationCode={invitationCode}
+                >
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
+                      {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                        <div key={index} className="text-center text-[9px] sm:text-xs font-medium text-muted-foreground py-1">{day}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
+                      {dailyStats.map((stat, index) => {
+                        const isCurrentMonth = isSameMonth(stat.day, currentMonth);
+                        return (
+                          <div
+                            key={index}
+                            className={`relative aspect-square rounded-md border h-auto p-1 min-h-[32px]
+                              ${!isCurrentMonth ? 'opacity-30' : ''}
+                              ${stat.hasTrades && stat.totalProfit > 0 ? 'bg-green-500/20 border-green-500/30' : ''}
+                              ${stat.hasTrades && stat.totalProfit < 0 ? 'bg-red-500/20 border-red-500/30' : ''}
+                              ${!stat.hasTrades ? 'bg-muted/10 border-border/20' : ''}`}
+                          >
+                            <div className="absolute top-0.5 right-0.5 text-[8px] sm:text-[10px] font-bold">{format(stat.day, "d")}</div>
+                            {stat.hasTrades && (
+                              <div className="flex flex-col items-center justify-center h-full pt-2">
+                                <div className={`text-[8px] sm:text-[10px] font-bold ${stat.totalProfit > 0 ? 'text-green-500' : stat.totalProfit < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                  ${Math.abs(stat.totalProfit).toFixed(0)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </MonthlyCardScreenshot>
+              </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <PropFirmFilter propFirms={propFirms} selectedFirm={selectedPropFirm} selectedAccount={selectedAccount} onFirmChange={setSelectedPropFirm} onAccountChange={setSelectedAccount} />
                 <div className="flex items-center justify-center gap-1">
@@ -649,10 +748,10 @@ export default function Analytics() {
             <p className="text-xs text-muted-foreground mt-1">{format(currentMonth, "MMMM yyyy")}</p>
           </CardHeader>
           <CardContent className="px-3 sm:px-4 pb-3">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {weeklyData.map((week) => (
-                <div key={week.weekNumber} className={`p-2.5 sm:p-3 rounded-lg border transition-all ${week.tradingDays > 0 ? week.totalPnL >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20' : 'bg-muted/20 border-border/30'}`}>
-                  <div className="flex items-center justify-between mb-1.5">
+                <div key={week.weekNumber} className={`p-2 rounded-lg border transition-all ${week.tradingDays > 0 ? week.totalPnL >= 0 ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20' : 'bg-muted/20 border-border/30'}`}>
+                  <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-xs sm:text-sm">Week {weekNumberToWord(week.weekNumber)}</span>
                     <span className="text-[10px] sm:text-xs text-muted-foreground">{format(week.startDate, "MMM d")} - {format(week.endDate, "MMM d")}</span>
                   </div>

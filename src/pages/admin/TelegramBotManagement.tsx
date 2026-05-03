@@ -82,9 +82,13 @@ export default function TelegramBotManagement() {
       });
       if (!error && data?.result) {
         setWebhookInfo(data.result);
+      } else {
+        console.warn('Webhook status unavailable:', error);
+        setWebhookInfo(null);
       }
     } catch (err) {
-      console.error('Failed to load webhook status:', err);
+      console.warn('Failed to load webhook status:', err);
+      setWebhookInfo(null);
     }
   };
 

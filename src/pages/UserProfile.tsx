@@ -146,9 +146,12 @@ export default function UserProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Exclude bio from update - column doesn't exist in database
+      const { bio, ...updateData } = validated;
+
       const { error } = await supabase
         .from("profiles")
-        .update(validated)
+        .update(updateData)
         .eq("id", user.id);
 
       if (error) throw error;
@@ -160,6 +163,7 @@ export default function UserProfile() {
 
       loadProfile();
     } catch (error) {
+      console.error("Profile update error:", error);
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
@@ -168,9 +172,10 @@ export default function UserProfile() {
         });
         return;
       }
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
       toast({
         title: "Error",
-        description: "Failed to update profile",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -292,13 +297,13 @@ export default function UserProfile() {
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   Your current account status: <Badge variant={
                     formData.account_type === 'Funded' ? 'default' : 
                     formData.account_type === 'Evaluation' ? 'secondary' : 
                     'outline'
                   } className="ml-1">{formData.account_type}</Badge>
-                </p>
+                </div>
               </div>
 
               <Button type="submit" disabled={loading} className="w-full">

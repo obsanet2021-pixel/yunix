@@ -202,9 +202,19 @@ export default function SupportEnquiryModal({
       }
     } catch (error: any) {
       console.error('AI chat error:', error);
+      // Provide helpful fallback responses based on category
+      const fallbackResponses: Record<string, string> = {
+        'account': "For account issues, please try:\n• Check your internet connection\n• Clear browser cache and cookies\n• Try logging out and back in\n• Use an incognito/private browser window\n\nIf the issue persists, I can help you create a support ticket.",
+        'courses': "For course access problems:\n• Ensure you're logged in with the correct account\n• Check if your enrollment is active\n• Try refreshing the page\n• Clear your browser cache\n\nNeed more help? Let me know!",
+        'certificates': "For certificate questions:\n• Certificates appear after completing all course modules\n• Check your progress in the course dashboard\n• Certificate generation may take a few minutes\n\nHave questions about plaque orders? Let me know!",
+        'payment': "For payment issues:\n• Verify your card has sufficient funds\n• Check if your bank allows online transactions\n• Try a different payment method\n• Contact your bank if charges are declined\n\nNeed a refund or invoice? I can help!",
+        'technical': "For technical issues:\n• Try refreshing the page (F5 or Ctrl+R)\n• Clear browser cache and cookies\n• Disable browser extensions temporarily\n• Try a different browser\n• Check your internet connection\n\nStill having issues? Let me know the specific error!",
+        'other': "I'm having trouble connecting right now. Here are some general troubleshooting steps:\n\n• Refresh the page\n• Check your internet connection\n• Try again in a few minutes\n\nIf you need immediate assistance, you can create a support ticket."
+      };
+      const fallbackMessage = selectedCategory ? fallbackResponses[selectedCategory] : fallbackResponses['other'];
       setAiMessages(prev => [...prev, {
         role: 'assistant',
-        content: "I'm having trouble connecting right now. Please try again or create a support ticket for assistance."
+        content: fallbackMessage
       }]);
     } finally {
       setAiLoading(false);

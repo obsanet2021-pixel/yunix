@@ -122,16 +122,20 @@ export default function DeliveryBotManagement() {
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { text: '/test', chat: { id: 0 } } }),
+        body: JSON.stringify({ action: 'test_connection', message: { text: '/test', chat: { id: 0 } } }),
       });
 
+      const responseData = await response.text();
+      
       if (response.ok) {
         toast.success('Webhook is responding correctly');
       } else {
-        toast.error('Webhook responded with an error');
+        console.error('Webhook error:', response.status, responseData);
+        toast.error(`Webhook error: ${response.status} - ${responseData || 'Unknown error'}`);
       }
     } catch (error) {
-      toast.error('Failed to connect to webhook');
+      console.error('Failed to connect to webhook:', error);
+      toast.error(`Failed to connect: ${error instanceof Error ? error.message : 'Network error'}`);
     } finally {
       setTestingConnection(false);
     }

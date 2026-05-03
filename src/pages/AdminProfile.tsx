@@ -175,6 +175,7 @@ export default function AdminProfile() {
 
       checkAdminAndLoadProfile();
     } catch (error) {
+      console.error("Profile update error:", error);
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
@@ -183,9 +184,10 @@ export default function AdminProfile() {
         });
         return;
       }
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
       toast({
         title: "Error",
-        description: "Failed to update profile",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
