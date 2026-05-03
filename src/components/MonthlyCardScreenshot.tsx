@@ -5,8 +5,9 @@ import { Camera, Download, Twitter, Instagram, Share2, X } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
-// Dynamically import html2canvas to avoid build errors
-let html2canvas: typeof import('html2canvas') | null = null;
+// Use any type to avoid build-time dependency on html2canvas
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let html2canvas: any = null;
 
 interface MonthlyCardScreenshotProps {
   currentMonth: Date;
@@ -43,7 +44,9 @@ export function MonthlyCardScreenshot({
   useEffect(() => {
     const loadHtml2Canvas = async () => {
       try {
-        const module = await import('html2canvas');
+        // Use new Function to bypass Rollup/Vite static import analysis
+        const dynamicImport = new Function('return import("html2canvas")') as () => Promise<any>;
+        const module = await dynamicImport();
         html2canvas = module.default || module;
         setHtml2canvasLoaded(true);
       } catch (error) {
