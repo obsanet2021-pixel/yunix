@@ -70,6 +70,7 @@ import DeliveryBotManagement from "./pages/admin/DeliveryBotManagement";
 import Loyalty from "./pages/Loyalty";
 import Partners from "./pages/Partners";
 import Payouts from "./pages/Payouts";
+import Pricing from "./pages/Pricing";
 import InvitationContest from "./pages/InvitationContest";
 import LoyaltyOperations from "./pages/admin/LoyaltyOperations";
 import PartnerOperations from "./pages/admin/PartnerOperations";
@@ -94,6 +95,7 @@ const AppContent = () => {
       <Route path="/blog" element={<Blog />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/cookies" element={<CookiePolicy />} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
 
       {/* User App Routes (Protected) - USER Layout */}
