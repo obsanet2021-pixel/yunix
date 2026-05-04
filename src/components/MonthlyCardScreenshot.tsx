@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Camera, Download, Twitter, Instagram, Share2, X } from "lucide-react";
+import { Camera, Download, Twitter, Instagram, Share2, X, Lock, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,10 +19,14 @@ interface MonthlyCardScreenshotProps {
   totalTradingDays: number;
   invitationCode?: string;
   children: React.ReactNode;
+  disabled?: boolean;
+  upsellMessage?: string;
 }
 
 export function MonthlyCardScreenshot({
   currentMonth,
+  disabled = false,
+  upsellMessage = "Upgrade to Starter to unlock screenshot sharing",
   totalTrades,
   winningTrades,
   losingTrades,
@@ -270,10 +274,32 @@ export function MonthlyCardScreenshot({
         </div>
       </div>
 
-      <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="h-8">
-        <Camera className="h-4 w-4 mr-1" />
-        {invitationCode ? `Share (${invitationCode})` : "Share"}
-      </Button>
+      {disabled ? (
+        <div className="group relative">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="h-8 opacity-60 cursor-not-allowed"
+          >
+            <Lock className="h-4 w-4 mr-1" />
+            Share
+          </Button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-popover text-popover-foreground text-xs p-2 rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <div className="flex items-center gap-1 mb-1">
+              <Sparkles className="h-3 w-3 text-yellow-500" />
+              <span className="font-semibold">Pro Feature</span>
+            </div>
+            {upsellMessage}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-popover" />
+          </div>
+        </div>
+      ) : (
+        <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="h-8">
+          <Camera className="h-4 w-4 mr-1" />
+          {invitationCode ? `Share (${invitationCode})` : "Share"}
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md">

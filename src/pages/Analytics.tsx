@@ -22,6 +22,7 @@ import {
   type TradeWithPricing 
 } from "@/lib/tradeCalculations";
 import { MonthlyCardScreenshot } from "@/components/MonthlyCardScreenshot";
+import { useScreenshotFeature } from "@/hooks/usePlanFeatures";
 
 interface Trade {
   id: string; pair: string; profit: number; session: string | null; emotion: string | null;
@@ -98,6 +99,7 @@ export default function Analytics() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const { canAccess: canAccessScreenshot, upsellMessage } = useScreenshotFeature();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [propFirms, setPropFirms] = useState<PropFirm[]>([]);
   const [timeRange, setTimeRange] = useState("30");
@@ -400,6 +402,8 @@ export default function Analytics() {
                   totalProfit={totalProfit}
                   totalTradingDays={totalTradingDays}
                   invitationCode={invitationCode}
+                  disabled={!canAccessScreenshot}
+                  upsellMessage={upsellMessage}
                 >
                   <div className="grid grid-cols-7 gap-0.5 mb-1">
                     {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
@@ -656,6 +660,8 @@ export default function Analytics() {
                   totalProfit={totalProfit}
                   totalTradingDays={totalTradingDays}
                   invitationCode={invitationCode}
+                  disabled={!canAccessScreenshot}
+                  upsellMessage={upsellMessage}
                 >
                   <div className="space-y-1">
                     <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
