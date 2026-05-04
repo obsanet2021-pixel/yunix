@@ -31,6 +31,7 @@ export default function MobileNavigation({ isOpen, onClose }: MobileNavigationPr
     { icon: BookOpen, label: 'Courses', path: '#courses' },
     { icon: MessageSquare, label: 'Testimonials', path: '#testimonials' },
     { icon: Info, label: 'About', path: '/about' },
+    { icon: Info, label: 'Pricing', path: '/pricing' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
