@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, LineChart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const features = {
   free: [
@@ -89,12 +89,10 @@ export default function Pricing() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
-                <LineChart className="h-5 w-5 text-primary-foreground" />
-              </div>
+            <Link to="/" className="flex items-center gap-2">
+              <img src="/yunix logo.png" alt="Yunix" className="h-9 w-9 object-contain rounded-lg" />
               <span className="text-xl font-bold text-white">YUNIX</span>
-            </div>
+            </Link>
             <Button variant="ghost" onClick={() => navigate("/auth")} className="text-white/70 hover:text-white">
               Sign In
             </Button>

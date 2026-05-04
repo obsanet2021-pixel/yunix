@@ -133,7 +133,7 @@ export default function HomePage() {
               <a href="#compare" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Compare</a>
               <a href="#courses" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Courses</a>
               <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Reviews</a>
-              <Link to="/pricing" className="text-sm font-medium text-primary hover:text-primary/80 hover:bg-primary/10 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Pricing</Link>
+              <Link to="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Pricing</Link>
             </nav>
             <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-5 py-2 h-10 text-sm font-medium text-muted-foreground border border-border hover:text-foreground hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">Sign In</Button>
