@@ -850,6 +850,61 @@ export default function TradeJournal() {
                   accept="image/*"
                   onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
                 />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="text-xs text-muted-foreground self-center">or upload:</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => document.getElementById('html_upload')?.click()}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    HTML
+                  </Button>
+                  <input
+                    id="html_upload"
+                    type="file"
+                    accept=".html,.htm"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        toast({
+                          title: "HTML file selected",
+                          description: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+                        });
+                        // TODO: Handle HTML upload logic
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => document.getElementById('excel_upload')?.click()}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    XLSX/Excel
+                  </Button>
+                  <input
+                    id="excel_upload"
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        toast({
+                          title: "Excel file selected",
+                          description: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+                        });
+                        // TODO: Handle Excel upload logic
+                      }
+                    }}
+                  />
+                </div>
               </div>
               <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary/90">
                 {isLoading ? "Saving..." : "Save Trade"}
