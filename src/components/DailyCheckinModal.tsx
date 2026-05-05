@@ -106,8 +106,8 @@ export default function DailyCheckinModal({ open, onClose }: DailyCheckinModalPr
         throw insertError;
       }
 
-      // Show success immediately
-      toast({ title: "Check-in saved! ✅", description: "Have a great trading day!" });
+      // Show success immediately with generic message while AI generates
+      toast({ title: "Check-in saved! ✅", description: "YUNIX is preparing your personalized insights..." });
 
       // Generate AI response asynchronously (non-blocking)
       try {
@@ -136,8 +136,26 @@ export default function DailyCheckinModal({ open, onClose }: DailyCheckinModalPr
           await supabase.from("daily_checkins").update({ ai_response: aiMsg }).eq("id", insertData.id);
         }
 
-        // Always show the final step, with fallback message
-        setAiResponse(aiMsg || "Great mindset! Stay disciplined, follow your plan, and trust your process today. 🚀");
+        // Show personalized AI response or fallback
+        if (aiMsg) {
+          setAiResponse(aiMsg);
+        } else {
+          // Contextual fallback based on user's inputs
+          const moodLower = mood.toLowerCase();
+          let fallbackMsg = "Great mindset! Stay disciplined, follow your plan, and trust your process today. 🚀";
+
+          if (moodLower === "anxious" || moodLower === "frustrated") {
+            fallbackMsg = "I see you're feeling some tension today. That's okay—acknowledge it and trade smaller. Focus on process, not profits. You've got this! 💪";
+          } else if (moodLower === "calm" || moodLower === "confident") {
+            fallbackMsg = "Your mindset is dialed in today! That calm confidence is your edge. Wait for those A+ setups and execute with conviction. 🎯";
+          } else if (stress_level >= 7) {
+            fallbackMsg = `High stress (${stress_level}/10) detected. Your well-being comes first. Consider taking it slow today, smaller positions, and regular breaks. 🧘`;
+          } else if (sleep_quality === "poor" || sleep_quality === "fair") {
+            fallbackMsg = "Your sleep wasn't optimal—be extra mindful today. Stay hydrated, take breaks, and stick to your highest probability setups only. ⚠️";
+          }
+
+          setAiResponse(fallbackMsg);
+        }
         setStep(totalSteps);
       } catch (aiError) {
         console.error("AI_GENERATION_ERROR", { error: aiError, inputData: { mood, confidence, stress, sleepQuality } });
@@ -280,10 +298,27 @@ export default function DailyCheckinModal({ open, onClose }: DailyCheckinModalPr
         );
       case totalSteps:
         return (
-          <div className="space-y-4 text-center">
-            <Sparkles className="h-10 w-10 text-primary mx-auto" />
-            <h3 className="text-lg font-semibold">YUNIX Says</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{aiResponse}</p>
+          <div className="space-y-4">
+            <div className="text-center space-y-2">
+              <Sparkles className="h-10 w-10 text-primary mx-auto" />
+              <h3 className="text-lg font-semibold">YUNIX Says</h3>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 text-sm leading-relaxed whitespace-pre-line">
+              {aiResponse.split('\n').map((line, i) => {
+                // Render bold sections
+                if (line.includes('**')) {
+                  const parts = line.split('**');
+                  return (
+                    <p key={i} className="mb-2 font-medium text-foreground">
+                      {parts.map((part, j) =>
+                        j % 2 === 1 ? <strong key={j} className="text-primary">{part}</strong> : part
+                      )}
+                    </p>
+                  );
+                }
+                return line.trim() ? <p key={i} className="mb-2 text-muted-foreground">{line}</p> : null;
+              })}
+            </div>
           </div>
         );
       default:
