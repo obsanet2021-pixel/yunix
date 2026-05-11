@@ -182,7 +182,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   };
 
-  const handlePostAuthRedirect = (user: User) => {
+  const handlePostAuthRedirect = async (user: User) => {
+    console.log('AuthProvider handlePostAuthRedirect called');
+    console.log('user.user_metadata?.role:', user.user_metadata?.role);
+    console.log('customSession?.user_role:', customSession?.user_role);
+
+    // Fetch role from database like Auth.tsx does
+    let dbRole = null;
+    try {
+      const { data: staff } = await supabase
+        .from("staff")
+        .select(`role:admin_roles(name)`)
+        .eq("email", user.email?.toLowerCase())
+        .single();
+
+      const staffData = staff as any;
+      dbRole = staffData && staffData.role ? (Array.isArray(staffData.role) ? staffData.role[0] : staffData.role) : null;
+      console.log('Fetched role from database in AuthProvider:', dbRole?.name);
+    } catch (error) {
+      console.error('Error fetching role from database:', error);
+    }
+
     const roleRoutes: Record<string, string> = {
       'CEO': '/app/admin/ceo',
       'COO': '/app/admin/staff/coo',
@@ -194,12 +214,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'Data Analyst': '/app/admin/staff/analytics',
       'Plaque Order Manager': '/app/admin/staff/plaque-orders',
       'Order Manager': '/app/admin/staff/plaque-orders',
-      'Social Media Manager': '/app/admin/staff/marketing',
+      'Social Media Manager': '/app/admin/staff/social-media',
+      'Social Media': '/app/admin/staff/social-media',
       'Marketing': '/app/admin/staff/marketing',
     };
 
-    const role = user.user_metadata?.role || customSession?.user_role || 'user';
-    const redirectPath = roleRoutes[role] || '/dashboard';
+    const role = dbRole?.name || user.user_metadata?.role || customSession?.user_role || 'user';
+    const redirectPath = roleRoutes[role] || '/app/dashboard';
+
+    console.log('Final role used:', role);
+    console.log('Redirect path in AuthProvider:', redirectPath);
 
     // Use React Router for navigation
     window.location.href = redirectPath;

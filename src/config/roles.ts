@@ -171,7 +171,7 @@ export const ROLE_SECTION_ACCESS: Record<string, string[]> = {
     'staff/marketing',
   ],
   'Social Media Manager': [
-    'staff/marketing',
+    'staff/social-media',
   ],
   'Data Analyst': [
     'staff/analytics',
@@ -202,7 +202,7 @@ export const ROLE_ROUTES: Record<StaffRole | 'user', string> = {
   'Course Manager': '/app/admin/staff/course-manager',
   'Marketing': '/app/admin/staff/marketing',
   'Marketing Agent': '/app/admin/staff/marketing',
-  'Social Media Manager': '/app/admin/staff/marketing',
+  'Social Media Manager': '/app/admin/staff/social-media',
   'Data Analyst': '/app/admin/staff/analytics',
   'Support': '/app/admin/staff/support',
   'Support Agent': '/app/admin/staff/support',

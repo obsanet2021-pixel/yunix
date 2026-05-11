@@ -66,7 +66,8 @@ const roleRoutes: Record<string, string> = {
   'Data Analyts': '/app/admin/staff/analytics',
   'Plaque Order Manager': '/app/admin/staff/plaque-orders',
   'order Manager': '/app/admin/staff/plaque-orders',
-  'Social Media Manager': '/app/admin/staff/marketing',
+  'Social Media Manager': '/app/admin/staff/social-media',
+  'Social Media': '/app/admin/staff/social-media',
   'Marketing': '/app/admin/staff/marketing',
   'Developer': '/app/admin/staff/cto',
 };
@@ -171,7 +172,7 @@ export default function Auth() {
       _user_id: userId,
       _role: 'staff'
     });
-    
+
     if (isStaff) {
       await linkStaffUser(userId, userEmail);
       // Get actual role name from staff table
@@ -181,7 +182,9 @@ export default function Auth() {
         .eq("email", userEmail.toLowerCase())
         .single();
       const role = staff ? (Array.isArray(staff.role) ? staff.role[0] : staff.role) : null;
+      console.log('Fetched role from database:', role?.name);
       const redirectRoute = getRedirectRoute(role?.name || null);
+      console.log('Redirect route:', redirectRoute);
       navigate(redirectRoute, { replace: true });
     } else {
       navigate("/app/dashboard", { replace: true });

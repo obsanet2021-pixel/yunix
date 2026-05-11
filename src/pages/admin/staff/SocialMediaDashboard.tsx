@@ -51,8 +51,9 @@ export default function SocialMediaDashboard() {
   const [loading, setLoading] = useState(true);
   const [qualityIssues, setQualityIssues] = useState<any[]>([]);
 
-  const isSocialMediaManager = staffData?.role?.name === 'Social Media Manager' || 
-    staffData?.role?.name === 'Marketing' || 
+  const isSocialMediaManager = staffData?.role?.name === 'Social Media Manager' ||
+    staffData?.role?.name === 'Social Media' ||
+    staffData?.role?.name === 'Marketing' ||
     staffData?.role?.name === 'CEO';
 
   useEffect(() => {

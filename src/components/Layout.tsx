@@ -94,8 +94,8 @@ const roleDashboards: Record<string, { name: string; href: string; icon: any; co
     gradient: 'from-amber-500/10 to-amber-600/10 border-amber-500/30'
   },
   'Social Media Manager': { 
-    name: 'Marketing Dashboard', 
-    href: '/app/admin/staff/marketing', 
+    name: 'Social Media Dashboard', 
+    href: '/app/admin/staff/social-media', 
     icon: Activity, 
     color: 'text-rose-400',
     gradient: 'from-rose-500/10 to-rose-600/10 border-rose-500/30'

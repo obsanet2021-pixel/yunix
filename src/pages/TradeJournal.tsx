@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, TrendingUp, TrendingDown, Trash2, X, Pencil, Upload, RotateCcw, AlertTriangle } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Trash2, X, Pencil, Upload, RotateCcw, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -16,12 +16,14 @@ import { CycleFilter } from "@/components/propfirms/CycleFilter";
 import { useAllCyclesForUser } from "@/hooks/useAccountCycles";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EMOTION_TAGS, MISTAKE_TAGS, getEmotionTagStyle, getMistakeTagLabel } from "@/lib/tradeCalculations";
+import * as XLSX from 'xlsx';
 
 interface PropFirm {
   id: string;
   name: string;
   account_type?: string;
   balance?: number | null;
+  account_number?: string;
 }
 
 interface Trade {
@@ -94,6 +96,26 @@ export default function TradeJournal() {
   });
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [parsedTrades, setParsedTrades] = useState<ParsedTrade[]>([]);
+  const [parsedAccountInfo, setParsedAccountInfo] = useState<{account?: string; company?: string}>({});
+  const [showImportDialog, setShowImportDialog] = useState(false);
+
+  interface ParsedTrade {
+    openTime: string;
+    position: string;
+    symbol: string;
+    type: string;
+    volume: number;
+    entryPrice: number;
+    stopLoss?: number;
+    takeProfit?: number;
+    closeTime: string;
+    closePrice: number;
+    commission: number;
+    swap: number;
+    profit: number;
+  }
 
   useEffect(() => {
     const getUser = async () => {
@@ -176,6 +198,322 @@ export default function TradeJournal() {
     }
 
     setPropFirms(data || []);
+  };
+
+  // Parse HTML file to extract Positions table
+  const parseHtmlPositions = (htmlContent: string): { trades: ParsedTrade[]; accountInfo: {account?: string; company?: string} } => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    
+    // Extract account info from text content
+    const textContent = doc.body.textContent || '';
+    const accountMatch = textContent.match(/Account:\s*(\d+)/i);
+    const companyMatch = textContent.match(/Company:\s*([^\n]+)/i);
+    
+    const accountInfo = {
+      account: accountMatch?.[1],
+      company: companyMatch?.[1]?.trim()
+    };
+
+    // Find the Positions table - look for table with specific headers
+    const tables = doc.querySelectorAll('table');
+    let positionsTable: HTMLTableElement | null = null;
+    
+    for (const table of tables) {
+      const headers = table.querySelectorAll('th');
+      const headerText = Array.from(headers).map(h => h.textContent?.trim()).join(' ');
+      
+      // Check if this is the Positions table (has Time, Position, Symbol, Type, etc.)
+      if (headerText.includes('Time') && headerText.includes('Position') && headerText.includes('Symbol') && headerText.includes('Type')) {
+        positionsTable = table;
+        break;
+      }
+    }
+
+    if (!positionsTable) {
+      throw new Error('Positions table not found in HTML');
+    }
+
+    const rows = positionsTable.querySelectorAll('tr');
+    const trades: ParsedTrade[] = [];
+
+    // Skip header row
+    for (let i = 1; i < rows.length; i++) {
+      const cells = rows[i].querySelectorAll('td');
+      if (cells.length >= 12) {
+        const openTime = cells[0]?.textContent?.trim() || '';
+        const position = cells[1]?.textContent?.trim() || '';
+        const symbol = cells[2]?.textContent?.trim() || '';
+        const type = cells[3]?.textContent?.trim()?.toLowerCase() || '';
+        const volume = parseFloat(cells[4]?.textContent?.trim() || '0');
+        const entryPrice = parseFloat(cells[5]?.textContent?.trim() || '0');
+        const stopLoss = cells[6]?.textContent?.trim() ? parseFloat(cells[6].textContent!) : undefined;
+        const takeProfit = cells[7]?.textContent?.trim() ? parseFloat(cells[7].textContent!) : undefined;
+        const closeTime = cells[8]?.textContent?.trim() || '';
+        const closePrice = parseFloat(cells[9]?.textContent?.trim() || '0');
+        const commission = parseFloat(cells[10]?.textContent?.trim() || '0');
+        const swap = parseFloat(cells[11]?.textContent?.trim() || '0');
+        const profit = parseFloat(cells[12]?.textContent?.trim() || '0');
+
+        if (symbol && volume > 0) {
+          trades.push({
+            openTime,
+            position,
+            symbol,
+            type: type === 'buy' ? 'Buy' : type === 'sell' ? 'Sell' : type,
+            volume,
+            entryPrice,
+            stopLoss,
+            takeProfit,
+            closeTime,
+            closePrice,
+            commission,
+            swap,
+            profit
+          });
+        }
+      }
+    }
+
+    return { trades, accountInfo };
+  };
+
+  // Parse Excel file to extract Positions sheet
+  const parseExcelPositions = (arrayBuffer: ArrayBuffer): { trades: ParsedTrade[]; accountInfo: {account?: string; company?: string} } => {
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    
+    // Look for Positions sheet
+    const positionsSheetName = workbook.SheetNames.find(name => 
+      name.toLowerCase().includes('position') || 
+      name.toLowerCase().includes('closed')
+    ) || workbook.SheetNames[0];
+    
+    const worksheet = workbook.Sheets[positionsSheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as (string | number)[][];
+    
+    if (jsonData.length < 2) {
+      throw new Error('No data found in Excel file');
+    }
+
+    // Find account info from first rows (often in first few rows before table)
+    let accountInfo: {account?: string; company?: string} = {};
+    let dataStartRow = 0;
+    
+    for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+      const row = jsonData[i];
+      const rowText = row.join(' ');
+      
+      const accountMatch = rowText.match(/Account:\s*(\d+)/i);
+      const companyMatch = rowText.match(/Company:\s*([^,]+)/i);
+      
+      if (accountMatch) accountInfo.account = accountMatch[1];
+      if (companyMatch) accountInfo.company = companyMatch[1].trim();
+      
+      // Check if this is header row
+      const headerText = rowText.toLowerCase();
+      if (headerText.includes('time') && headerText.includes('position') && headerText.includes('symbol')) {
+        dataStartRow = i;
+        break;
+      }
+    }
+
+    const trades: ParsedTrade[] = [];
+    const headers = jsonData[dataStartRow] as string[];
+    
+    // Map column indices based on headers
+    const colIndices: Record<string, number> = {};
+    headers.forEach((h, idx) => {
+      const header = String(h).toLowerCase().trim();
+      if (header.includes('time') && !header.includes('close')) colIndices.openTime = idx;
+      if (header.includes('position')) colIndices.position = idx;
+      if (header.includes('symbol')) colIndices.symbol = idx;
+      if (header.includes('type')) colIndices.type = idx;
+      if (header.includes('volume')) colIndices.volume = idx;
+      if (header.includes('price') && !header.includes('close')) colIndices.entryPrice = idx;
+      if (header.includes('s / l') || header.includes('stop')) colIndices.stopLoss = idx;
+      if (header.includes('t / p') || header.includes('take')) colIndices.takeProfit = idx;
+      if (header.includes('time') && idx !== colIndices.openTime) colIndices.closeTime = idx;
+      if (header.includes('price') && idx !== colIndices.entryPrice) colIndices.closePrice = idx;
+      if (header.includes('commission')) colIndices.commission = idx;
+      if (header.includes('swap')) colIndices.swap = idx;
+      if (header.includes('profit')) colIndices.profit = idx;
+    });
+
+    for (let i = dataStartRow + 1; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row[colIndices.symbol]) continue;
+      
+      const volume = parseFloat(String(row[colIndices.volume] || '0'));
+      if (volume <= 0) continue;
+
+      const type = String(row[colIndices.type] || '').toLowerCase();
+      
+      trades.push({
+        openTime: String(row[colIndices.openTime] || ''),
+        position: String(row[colIndices.position] || ''),
+        symbol: String(row[colIndices.symbol] || ''),
+        type: type === 'buy' ? 'Buy' : type === 'sell' ? 'Sell' : type,
+        volume,
+        entryPrice: parseFloat(String(row[colIndices.entryPrice] || '0')),
+        stopLoss: row[colIndices.stopLoss] ? parseFloat(String(row[colIndices.stopLoss])) : undefined,
+        takeProfit: row[colIndices.takeProfit] ? parseFloat(String(row[colIndices.takeProfit])) : undefined,
+        closeTime: String(row[colIndices.closeTime] || ''),
+        closePrice: parseFloat(String(row[colIndices.closePrice] || '0')),
+        commission: parseFloat(String(row[colIndices.commission] || '0')),
+        swap: parseFloat(String(row[colIndices.swap] || '0')),
+        profit: parseFloat(String(row[colIndices.profit] || '0'))
+      });
+    }
+
+    return { trades, accountInfo };
+  };
+
+  // Find matching prop firm based on account number and company
+  const findMatchingPropFirm = (accountInfo: {account?: string; company?: string}): PropFirm | null => {
+    if (!accountInfo.account && !accountInfo.company) return null;
+    
+    return propFirms.find(firm => {
+      // Match by account number (if stored in name or account_number field)
+      const accountMatch = accountInfo.account && 
+        (firm.name.includes(accountInfo.account) || 
+         firm.account_number === accountInfo.account);
+      
+      // Match by company name
+      const companyMatch = accountInfo.company && 
+        firm.name.toLowerCase().includes(accountInfo.company.toLowerCase());
+      
+      return accountMatch || companyMatch;
+    }) || null;
+  };
+
+  // Handle HTML file upload
+  const handleHtmlUpload = async (file: File | undefined) => {
+    if (!file) return;
+    
+    setIsParsingFile(true);
+    try {
+      const text = await file.text();
+      const { trades, accountInfo } = parseHtmlPositions(text);
+      
+      setParsedTrades(trades);
+      setParsedAccountInfo(accountInfo);
+      
+      const matchedFirm = findMatchingPropFirm(accountInfo);
+      
+      toast({
+        title: `Parsed ${trades.length} trades from HTML`,
+        description: matchedFirm 
+          ? `Matched to: ${matchedFirm.name} (Account: ${accountInfo.account})`
+          : `Account: ${accountInfo.account}, Company: ${accountInfo.company} (No matching prop firm found)`,
+      });
+      
+      // Show dialog to confirm import
+      if (trades.length > 0) {
+        setShowImportDialog(true);
+      }
+    } catch (error) {
+      toast({
+        title: "Error parsing HTML",
+        description: error instanceof Error ? error.message : "Failed to parse positions",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  // Handle Excel file upload
+  const handleExcelUpload = async (file: File | undefined) => {
+    if (!file) return;
+    
+    setIsParsingFile(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const { trades, accountInfo } = parseExcelPositions(arrayBuffer);
+      
+      setParsedTrades(trades);
+      setParsedAccountInfo(accountInfo);
+      
+      const matchedFirm = findMatchingPropFirm(accountInfo);
+      
+      toast({
+        title: `Parsed ${trades.length} trades from Excel`,
+        description: matchedFirm 
+          ? `Matched to: ${matchedFirm.name} (Account: ${accountInfo.account})`
+          : `Account: ${accountInfo.account}, Company: ${accountInfo.company} (No matching prop firm found)`,
+      });
+      
+      if (trades.length > 0) {
+        setShowImportDialog(true);
+      }
+    } catch (error) {
+      toast({
+        title: "Error parsing Excel",
+        description: error instanceof Error ? error.message : "Failed to parse positions",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  // Save parsed trades to database
+  const saveParsedTrades = async () => {
+    if (parsedTrades.length === 0) return;
+    
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Error", description: "You must be logged in", variant: "destructive" });
+        return;
+      }
+
+      const matchedFirm = findMatchingPropFirm(parsedAccountInfo);
+      
+      // Prepare trades for insertion
+      const tradesToInsert = parsedTrades.map(trade => ({
+        user_id: user.id,
+        prop_firm_id: matchedFirm?.id || null,
+        pair: trade.symbol,
+        trade_type: trade.type,
+        volume: trade.volume,
+        entry_price: trade.entryPrice,
+        close_price: trade.closePrice,
+        take_profit: trade.takeProfit || null,
+        stop_loss: trade.stopLoss || null,
+        profit: trade.profit,
+        trade_date: trade.openTime.split(' ')[0] || new Date().toISOString().split('T')[0],
+        session: null,
+        emotion: null,
+        notes: `Imported from ${parsedAccountInfo.company || 'Unknown'} account ${parsedAccountInfo.account || 'N/A'}`,
+        screenshot_url: null,
+        screenshots: [],
+        commission: trade.commission,
+        swap: trade.swap,
+      }));
+
+      const { error } = await supabase.from("trades").insert(tradesToInsert);
+      
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Imported ${tradesToInsert.length} trades successfully`,
+      });
+      
+      setShowImportDialog(false);
+      setParsedTrades([]);
+      fetchTrades();
+    } catch (error) {
+      toast({
+        title: "Error importing trades",
+        description: error instanceof Error ? error.message : "Failed to save trades",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -867,16 +1205,7 @@ export default function TradeJournal() {
                     type="file"
                     accept=".html,.htm"
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        toast({
-                          title: "HTML file selected",
-                          description: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
-                        });
-                        // TODO: Handle HTML upload logic
-                      }
-                    }}
+                    onChange={(e) => handleHtmlUpload(e.target.files?.[0])}
                   />
                   <Button
                     type="button"
@@ -893,16 +1222,7 @@ export default function TradeJournal() {
                     type="file"
                     accept=".xlsx,.xls,.csv"
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        toast({
-                          title: "Excel file selected",
-                          description: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
-                        });
-                        // TODO: Handle Excel upload logic
-                      }
-                    }}
+                    onChange={(e) => handleExcelUpload(e.target.files?.[0])}
                   />
                 </div>
               </div>
@@ -1344,6 +1664,90 @@ export default function TradeJournal() {
           })}
         </div>
       )}
+
+      {/* Import Trades Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="bg-card border-border max-h-[80vh] overflow-y-auto max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Import {parsedTrades.length} Trades
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {/* Account Info */}
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-sm font-medium">Account Information</p>
+              <p className="text-xs text-muted-foreground">
+                Account: {parsedAccountInfo.account || 'N/A'} | Company: {parsedAccountInfo.company || 'N/A'}
+              </p>
+              {findMatchingPropFirm(parsedAccountInfo) && (
+                <p className="text-xs text-green-400 mt-1">
+                  Matched to: {findMatchingPropFirm(parsedAccountInfo)?.name}
+                </p>
+              )}
+            </div>
+
+            {/* Preview Table */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[300px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium">Symbol</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium">Type</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium">Volume</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium">Entry</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium">Close</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium">Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {parsedTrades.slice(0, 10).map((trade, idx) => (
+                      <tr key={idx} className="hover:bg-muted/50">
+                        <td className="px-3 py-2 font-medium">{trade.symbol}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs ${trade.type.toLowerCase() === 'buy' ? 'text-green-400' : 'text-red-400'}`}>
+                            {trade.type}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">{trade.volume}</td>
+                        <td className="px-3 py-2 font-mono">{trade.entryPrice.toFixed(2)}</td>
+                        <td className="px-3 py-2 font-mono">{trade.closePrice.toFixed(2)}</td>
+                        <td className={`px-3 py-2 text-right font-mono ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {parsedTrades.length > 10 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    ... and {parsedTrades.length - 10} more trades
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowImportDialog(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={saveParsedTrades}
+                disabled={isLoading}
+                className="flex-1 bg-primary hover:bg-primary/90"
+              >
+                {isLoading ? "Importing..." : `Import ${parsedTrades.length} Trades`}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
