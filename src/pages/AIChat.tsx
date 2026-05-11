@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, History, Plus, Trash2, MessageSquare, ImagePlus, X, Save, TrendingUp, Target, Award, BarChart3, Percent, Mic, MicOff, BookOpen, Shield, Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Bot, User, History, Plus, Trash2, MessageSquare, ImagePlus, X, Save, TrendingUp, Target, Award, BarChart3, Percent, Mic, MicOff, BookOpen, Shield, Brain, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -34,6 +34,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import StrategyRulesPanel from "@/components/StrategyRulesPanel";
 import ReactMarkdown from "react-markdown";
+import { parseTradeTextWithAI, parseTradeHistoryText, ParsedTrade } from "@/lib/tradeTextParser";
 
 type Message = {
   role: "user" | "assistant";
@@ -115,6 +116,11 @@ export default function AIChat() {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  
+  // Text paste states
+  const [textPasteMode, setTextPasteMode] = useState(false);
+  const [pastedText, setPastedText] = useState("");
+  const [isParsingText, setIsParsingText] = useState(false);
   
   // Trade extraction states
   const [extractedTrades, setExtractedTrades] = useState<ExtractedTradeData[]>([]);
@@ -545,8 +551,8 @@ export default function AIChat() {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
         console.error("Extract trades HTTP error:", response.status, errorData);
         
-        // Show specific error message
-        const errorMessage = errorData.details || errorData.error || `Server error (${response.status})`;
+        // Use sanitized error message from server (details field removed for security)
+        const errorMessage = errorData.error || "Unable to analyze screenshot. Please try again.";
         toast({
           title: "Extraction Failed",
           description: errorMessage,
@@ -581,6 +587,74 @@ export default function AIChat() {
       return [];
     } finally {
       setIsExtracting(false);
+    }
+  };
+
+  // ============ TEXT PASTE EXTRACTION ============
+  const handleTextPasteExtraction = async () => {
+    if (!pastedText.trim()) {
+      toast({
+        title: "No Text",
+        description: "Please paste trade history text first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsParsingText(true);
+    try {
+      // First try local regex parser
+      let trades = parseTradeHistoryText(pastedText);
+      
+      // If no trades found or few trades, try AI parsing
+      if (trades.length === 0) {
+        console.log("🤖 Regex parsing found no trades, trying AI...");
+        trades = await parseTradeTextWithAI(pastedText);
+      }
+
+      if (trades.length > 0) {
+        // Convert ParsedTrade to ExtractedTradeData format
+        const convertedTrades: ExtractedTradeData[] = trades.map(t => ({
+          pair: t.pair,
+          profit: t.profit,
+          volume: t.volume,
+          trade_type: t.trade_type as "Buy" | "Sell",
+          entry_price: t.entry_price,
+          close_price: t.close_price,
+          open_time: t.open_time,
+          close_time: t.close_time,
+          trade_date: t.trade_date,
+          session: t.session,
+          notes: t.notes
+        }));
+        
+        setExtractedTrades(convertedTrades);
+        const totalProfit = convertedTrades.reduce((sum, t) => sum + t.profit, 0);
+        
+        toast({
+          title: "Trades Parsed",
+          description: `${convertedTrades.length} trades extracted from text. Total P&L: $${totalProfit.toFixed(2)}`,
+        });
+        
+        // Clear the text area after successful extraction
+        setPastedText("");
+        setTextPasteMode(false);
+      } else {
+        toast({
+          title: "No Trades Found",
+          description: "Could not extract any trades from the pasted text. Please check the format.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Text parsing error:", error);
+      toast({
+        title: "Parsing Failed",
+        description: error instanceof Error ? error.message : "Failed to parse trade text. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsParsingText(false);
     }
   };
 
@@ -1083,12 +1157,69 @@ export default function AIChat() {
           </div>
         )}
 
+        {/* Text Paste Mode */}
+        {textPasteMode && (
+          <div className="border-t border-border/50 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Paste Trade History from Prop Firm
+              </Label>
+              <Button variant="ghost" size="sm" onClick={() => setTextPasteMode(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <textarea
+              value={pastedText}
+              onChange={e => setPastedText(e.target.value)}
+              placeholder="Paste your trade history here...&#10;Example:&#10;XAUUSD  TAKE_PROFIT  2026.04.23, 13:24:30&#10;0.02&#10;$4,729.72&#10;..."
+              className="w-full h-48 p-3 text-xs font-mono border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={isParsingText}
+            />
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleTextPasteExtraction} 
+                disabled={isParsingText || !pastedText.trim()}
+                className="flex-1 gap-2"
+              >
+                {isParsingText ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4" />
+                    Extract Trades from Text
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={() => { setPastedText(""); setTextPasteMode(false); }}>
+                Cancel
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Works with copy-pasted trade history from MT4/MT5 or prop firm dashboards.
+            </p>
+          </div>
+        )}
+
         {/* Input Area */}
         <div className="border-t border-border/50 p-3 space-y-3">
           <div className="flex gap-2">
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isLoading} title="Upload screenshot (auto-detects)">
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isLoading || textPasteMode} title="Upload screenshot (auto-detects)">
               <ImagePlus className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={textPasteMode ? "default" : "outline"} 
+              size="icon" 
+              className="h-9 w-9 shrink-0" 
+              onClick={() => setTextPasteMode(!textPasteMode)} 
+              disabled={isLoading}
+              title="Paste trade history text"
+            >
+              <FileText className="h-4 w-4" />
             </Button>
             <Button
               variant={isListening ? "destructive" : "outline"}
