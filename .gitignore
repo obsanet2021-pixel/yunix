@@ -40,3 +40,10 @@ supabase/migrations/yunix_export/*
 # Temporary scripts (keep scripts/ tracked)
 scripts/temp/
 scripts/*.log
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
