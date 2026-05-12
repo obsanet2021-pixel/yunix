@@ -18,6 +18,29 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { OpenPositions } from "@/components/propfirms/OpenPositions";
 import TradeParser, { type ParsedTradeImport } from "@/components/TradeParser";
 
+/** Values safe for Postgres timestamptz; rejects prices like "$4,729.72". */
+function normalizeDbTimestamp(value: string | null | undefined): string | null {
+  if (value == null || typeof value !== "string") return null;
+  const v = value.trim();
+  if (!v) return null;
+  if (v.startsWith("$") || v.includes("$")) return null;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return v;
+  const m1 = v.match(/^(\d{4})\.(\d{2})\.(\d{2}),\s*(\d{2}):(\d{2}):(\d{2})$/);
+  if (m1) return `${m1[1]}-${m1[2]}-${m1[3]}T${m1[4]}:${m1[5]}:${m1[6]}`;
+  const m2 = v.match(/^(\d{4})\.(\d{2})\.(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (m2) return `${m2[1]}-${m2[2]}-${m2[3]}T${m2[4]}:${m2[5]}:${m2[6]}`;
+  return null;
+}
+
+function normalizeImportedTradeDate(d: string): string {
+  return d.replace(/\./g, "-").trim().slice(0, 10);
+}
+
+function normalizeImportedTradeType(tt: string | undefined): "buy" | "sell" {
+  const x = (tt || "buy").toLowerCase();
+  return x === "sell" ? "sell" : "buy";
+}
+
 const ACCOUNT_TYPES = ['Personal', 'Funded', 'Evaluation 1', 'Evaluation 2', 'Evaluation 3'] as const;
 const ACCOUNT_STATUS = ['In Progress', 'Passed', 'Failed'] as const;
 
@@ -264,7 +287,7 @@ export default function PropFirmDetail() {
           profit_target: editData.profit_target ? parseFloat(editData.profit_target) : null,
           current_profit: currentProfit,
           consistency_percentage: editData.consistency_percentage ? parseFloat(editData.consistency_percentage) : null,
-          account_type: editData.account_type as any,
+          account_type: editData.account_type as string,
           account_status: editData.account_status,
         })
         .eq("id", id);
@@ -352,21 +375,24 @@ export default function PropFirmDetail() {
       const tradesToInsert = parsedTradesToImport.map((trade) => ({
         user_id: user.id,
         prop_firm_id: id,
-        pair: trade.pair,
-        profit: trade.profit,
+        pair: (trade.pair || "UNKNOWN").trim(),
+        profit: Number.isFinite(trade.profit) ? trade.profit : 0,
         session: trade.session || null,
         notes: trade.notes || "Imported from Trade Parser",
-        trade_date: trade.trade_date.replace(/\./g, "-"),
-        trade_type: trade.trade_type.toLowerCase(),
-        volume: trade.volume || null,
-        entry_price: trade.entry_price || null,
-        close_price: trade.close_price || null,
-        open_time: trade.open_time || null,
-        close_time: trade.close_time || null,
+        trade_date: normalizeImportedTradeDate(trade.trade_date),
+        trade_type: normalizeImportedTradeType(trade.trade_type),
+        volume: trade.volume != null && Number.isFinite(trade.volume) ? trade.volume : null,
+        entry_price: trade.entry_price != null && Number.isFinite(trade.entry_price) ? trade.entry_price : null,
+        close_price: trade.close_price != null && Number.isFinite(trade.close_price) ? trade.close_price : null,
+        open_time: normalizeDbTimestamp(trade.open_time ?? undefined),
+        close_time: normalizeDbTimestamp(trade.close_time ?? undefined),
       }));
 
       const { error } = await supabase.from("trades").insert(tradesToInsert);
-      if (error) throw error;
+      if (error) {
+        console.error("Import parsed trades:", error);
+        throw new Error(error.message);
+      }
 
       toast({
         title: "Success",
@@ -378,10 +404,13 @@ export default function PropFirmDetail() {
       setIsAddTradeOpen(false);
       fetchTrades();
       fetchPropFirm();
-    } catch (_error) {
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        error instanceof Error ? error.message : "Failed to import parsed trades";
       toast({
         title: "Error",
-        description: "Failed to import parsed trades",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -438,10 +467,10 @@ export default function PropFirmDetail() {
       // Keep login and server filled for reference, only clear password
       setMt5FormData(prev => ({ ...prev, investor_password: "" }));
       fetchPropFirm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Connection Failed",
-        description: error.message || "Failed to save MT5 credentials",
+        description: error instanceof Error ? error.message : "Failed to save MT5 credentials",
         variant: "destructive"
       });
     } finally {
@@ -507,10 +536,10 @@ export default function PropFirmDetail() {
       // Refresh data
       fetchPropFirm();
       fetchTrades();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Sync failed",
         variant: "destructive",
       });
     } finally {
@@ -565,10 +594,10 @@ export default function PropFirmDetail() {
       // Refresh data
       fetchPropFirm();
       fetchTrades();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "External sync failed",
         variant: "destructive",
       });
     } finally {

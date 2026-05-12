@@ -4,24 +4,52 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
-import { Brain, Trash2, FileText, Download } from 'lucide-react';
+import { Brain, Trash2, FileText } from 'lucide-react';
 
 interface ParsedTrade {
   date: string;
   time: string;
+  /** Close *time* from the export (group before close price), not the price */
+  closeDateTime: string;
   pair: string;
   type: string;
   vol: string;
   entry: string;
   tp: string;
   sl: string;
+  /** Close *price* */
   close: string;
   pl: string;
   session: string;
   account: string;
 }
 
-export default function TradeParser({ onTradesExtracted }: { onTradesExtracted?: (trades: any[]) => void }) {
+/** MT5-style "2026.04.23, 17:43:01" → ISO string for Postgres timestamptz */
+function mt5DateTimeToIso(dt: string): string | null {
+  const m = dt.trim().match(/^(\d{4})\.(\d{2})\.(\d{2}),\s*(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`;
+}
+
+export type ParsedTradeImport = {
+  pair: string;
+  profit: number;
+  volume: number;
+  trade_type: string;
+  entry_price: number;
+  close_price: number;
+  open_time?: string | null;
+  close_time?: string | null;
+  trade_date: string;
+  session?: string;
+  notes?: string;
+};
+
+export default function TradeParser({
+  onTradesExtracted,
+}: {
+  onTradesExtracted?: (trades: ParsedTradeImport[]) => void;
+}) {
   const [rawInput, setRawInput] = useState('');
   const [parsedTrades, setParsedTrades] = useState<ParsedTrade[]>([]);
   const [isParsing, setIsParsing] = useState(false);
@@ -48,6 +76,7 @@ export default function TradeParser({ onTradesExtracted }: { onTradesExtracted?:
       trades.push({
         date: datePart,
         time: timePart,
+        closeDateTime,
         pair,
         type,
         vol,
@@ -94,19 +123,23 @@ export default function TradeParser({ onTradesExtracted }: { onTradesExtracted?:
         });
         
         // Convert to ExtractedTradeData format and pass to parent
-        const extractedTrades = trades.map(trade => ({
-          pair: trade.pair,
-          profit: parseFloat(trade.pl.replace(/[$,]/g, '')),
-          volume: parseFloat(trade.vol),
-          trade_type: trade.type.includes('PROFIT') ? 'Buy' : 'Sell',
-          entry_price: parseFloat(trade.entry.replace(/[$,]/g, '')),
-          close_price: parseFloat(trade.close.replace(/[$,]/g, '')),
-          open_time: `${trade.date} ${trade.time}`,
-          close_time: trade.close,
-          trade_date: trade.date,
-          session: trade.session,
-          notes: `Parsed from ${trade.pair} trade data`,
-        }));
+        const extractedTrades = trades.map((trade) => {
+          const openIso = mt5DateTimeToIso(`${trade.date}, ${trade.time}`);
+          const closeIso = mt5DateTimeToIso(trade.closeDateTime);
+          return {
+            pair: trade.pair,
+            profit: parseFloat(trade.pl.replace(/[$,]/g, '')),
+            volume: parseFloat(trade.vol),
+            trade_type: trade.type.includes('PROFIT') ? 'Buy' : 'Sell',
+            entry_price: parseFloat(trade.entry.replace(/[$,]/g, '')),
+            close_price: parseFloat(trade.close.replace(/[$,]/g, '')),
+            open_time: openIso,
+            close_time: closeIso,
+            trade_date: trade.date.replace(/\./g, '-'),
+            session: trade.session,
+            notes: `Parsed from ${trade.pair} trade data`,
+          };
+        });
         
         if (onTradesExtracted) {
           onTradesExtracted(extractedTrades);
