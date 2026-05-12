@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, History, Plus, Trash2, MessageSquare, ImagePlus, X, Save, TrendingUp, Target, Award, BarChart3, Percent, Mic, MicOff, BookOpen, Shield, Brain, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Send, Bot, User, History, Plus, Trash2, ImagePlus, X, Save, TrendingUp, Target, Award, BarChart3, Percent, Mic, MicOff, BookOpen, Shield, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -34,7 +34,27 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import StrategyRulesPanel from "@/components/StrategyRulesPanel";
 import ReactMarkdown from "react-markdown";
-import { parseTradeTextWithAI, parseTradeHistoryText, ParsedTrade } from "@/lib/tradeTextParser";
+import {
+  parseImportedOpenCloseTime,
+  parseImportedTradeDate,
+  sessionFromOpenTime,
+  type TradeImportTimezone,
+} from "@/lib/tradeImportFormat";
+import type { Database } from "@/integrations/supabase/database.types";
+
+type TradeInsert = Database["public"]["Tables"]["trades"]["Insert"];
+
+type WindowWithSpeech = Window & {
+  SpeechRecognition?: new () => SpeechRecognition;
+  webkitSpeechRecognition?: new () => SpeechRecognition;
+};
+
+interface ChatApiRequestBody {
+  messages: { role: string; content: string }[];
+  traderContext: string;
+  strategyRules?: string[];
+  imageBase64?: string;
+}
 
 type Message = {
   role: "user" | "assistant";
@@ -59,8 +79,6 @@ interface ExtractedTradeData {
   session?: string;
   notes?: string;
 }
-
-type TimezoneOption = "Europe/London" | "America/New_York";
 
 interface ChartAnalysis {
   direction: "bullish" | "bearish" | "neutral";
@@ -98,7 +116,7 @@ interface StrategyRule {
 
 const initialMessages: Message[] = [{
   role: "assistant",
-  content: "Hey! 👋 I'm YUNIX, your personal trading coach. I learn from your trades, enforce your strategy rules, and help you make better decisions.\n\nUpload screenshots, ask about your performance, or teach me your strategy! 🎯"
+  content: "Hey! 👋 I'm YUNIX, your personal trading coach. I learn from your trades, enforce your strategy rules, and help you make better decisions.\n\nUpload screenshots for auto-extract, ask about your performance, or teach me your strategy. To **paste trade history text** (MT4/MT5 / firm exports), use **Trade Journal → Add Trade → Paste / parse**. 🎯"
 }];
 
 export default function AIChat() {
@@ -118,11 +136,6 @@ export default function AIChat() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   
-  // Text paste states
-  const [textPasteMode, setTextPasteMode] = useState(false);
-  const [pastedText, setPastedText] = useState("");
-  const [isParsingText, setIsParsingText] = useState(false);
-  
   // Trade extraction states
   const [extractedTrades, setExtractedTrades] = useState<ExtractedTradeData[]>([]);
   const [propFirms, setPropFirms] = useState<PropFirm[]>([]);
@@ -132,13 +145,10 @@ export default function AIChat() {
   // Chart analysis state
   const [chartAnalysis, setChartAnalysis] = useState<ChartAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
-  // Timezone for session classification
-  const [screenshotTimezone, setScreenshotTimezone] = useState<TimezoneOption>("Europe/London");
 
   // Voice-to-text state
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -405,8 +415,9 @@ export default function AIChat() {
 
   // ============ VOICE-TO-TEXT ============
   const toggleListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    const w = window as WindowWithSpeech;
+    const SpeechRecognitionCtor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
       toast({ title: "Not Supported", description: "Voice input is not supported in this browser. Try Chrome or Edge.", variant: "destructive" });
       return;
     }
@@ -415,13 +426,13 @@ export default function AIChat() {
       setIsListening(false);
       return;
     }
-    const recognition = new SpeechRecognition();
+    const recognition = new SpeechRecognitionCtor();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
     let finalTranscript = input;
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
@@ -486,81 +497,6 @@ export default function AIChat() {
     setImagePreview(null);
   };
 
-  // ============ TEXT PASTE EXTRACTION ============
-  const handleTextPasteExtraction = async () => {
-    if (!pastedText.trim()) {
-      toast({
-        title: "No Text",
-        description: "Please paste trade history text first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsParsingText(true);
-    try {
-      // First try local regex parser
-      let trades = parseTradeHistoryText(pastedText);
-      
-      // If no trades found or few trades, try AI parsing
-      if (trades.length === 0) {
-        console.log("🤖 Regex parsing found no trades, trying AI...");
-        trades = await parseTradeTextWithAI(pastedText);
-      }
-
-      if (trades.length > 0) {
-        // Convert ParsedTrade to ExtractedTradeData format
-        const convertedTrades: ExtractedTradeData[] = trades.map(t => ({
-          pair: t.pair,
-          profit: t.profit,
-          volume: t.volume,
-          trade_type: t.trade_type as "Buy" | "Sell",
-          entry_price: t.entry_price,
-          close_price: t.close_price,
-          open_time: t.open_time,
-          close_time: t.close_time,
-          trade_date: t.trade_date,
-          session: t.session,
-          notes: t.notes
-        }));
-        
-        setExtractedTrades(convertedTrades);
-        const totalProfit = convertedTrades.reduce((sum, t) => sum + t.profit, 0);
-        
-        toast({
-          title: "Trades Parsed",
-          description: `${convertedTrades.length} trades extracted from text. Total P&L: $${totalProfit.toFixed(2)}`,
-        });
-        
-        // Add assistant message for text parsing
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: `📊 **Parsed ${convertedTrades.length} Trade${convertedTrades.length > 1 ? 's' : ''} from text!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the table below and click **Save to Journal** to store them in your journal database for Journal, Trade Management, and Analytics. 👇`,
-          extractedTrades: convertedTrades
-        }]);
-        
-        // Clear the text area after successful extraction
-        setPastedText("");
-        setTextPasteMode(false);
-      } else {
-        toast({
-          title: "No Trades Found",
-          description: "Could not extract any trades from the pasted text. Please check the format.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Text parsing error:", error);
-      toast({
-        title: "Parsing Failed",
-        description: error instanceof Error ? error.message : "Failed to parse trade text. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsParsingText(false);
-    }
-  };
-
   // ============ SAVE TRADES ============
   const saveTradesToJournal = async () => {
     if (extractedTrades.length === 0) return;
@@ -569,21 +505,22 @@ export default function AIChat() {
 
     setIsSavingTrades(true);
     try {
+      const tz: TradeImportTimezone = "Europe/London";
       const tradesToInsert = extractedTrades.map(trade => ({
         user_id: user.id,
         prop_firm_id: selectedPropFirmId !== "none" ? selectedPropFirmId : null,
-        cycle_id: cycleId,
+        cycle_id: null,
         pair: trade.pair,
         profit: trade.profit,
         volume: trade.volume,
         trade_type: trade.trade_type.toLowerCase(),
         entry_price: trade.entry_price,
         close_price: trade.close_price,
-        open_time: parseDateTime(trade.open_time),
-        close_time: parseDateTime(trade.close_time),
-        trade_date: parseTradeDate(trade.trade_date),
-        session: getSessionFromTime(trade.open_time, screenshotTimezone),
-        screenshot_url: screenshotUrl,
+        open_time: parseImportedOpenCloseTime(trade.open_time),
+        close_time: parseImportedOpenCloseTime(trade.close_time),
+        trade_date: parseImportedTradeDate(trade.trade_date),
+        session: sessionFromOpenTime(trade.open_time, tz),
+        screenshot_url: null,
         notes: trade.notes || "Imported from AI Chat",
         extracted_from_screenshot: Boolean(uploadedImage),
         ai_extraction_metadata: {
@@ -597,7 +534,7 @@ export default function AIChat() {
         },
       }));
 
-      const { error } = await supabase.from("trades").insert(tradesToInsert as any[]);
+      const { error } = await supabase.from("trades").insert(tradesToInsert as TradeInsert[]);
       if (error) throw error;
 
       const totalProfit = extractedTrades.reduce((sum, t) => sum + t.profit, 0);
@@ -619,51 +556,6 @@ export default function AIChat() {
       });
     } finally {
       setIsSavingTrades(false);
-    }
-  };
-
-  // ============ DATE/TIME HELPERS ============
-  const parseDateTime = (dateStr: string | undefined | null): string | null => {
-    if (!dateStr) return null;
-    const ddmmyyyyMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2}):(\d{2})$/);
-    if (ddmmyyyyMatch) { const [, d, m, y, h, mi, s] = ddmmyyyyMatch; return `${y}-${m}-${d}T${h}:${mi}:${s}`; }
-    const yyyymmddMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (yyyymmddMatch) return dateStr;
-    const ddmmyyyyOnlyMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (ddmmyyyyOnlyMatch) { const [, d, m, y] = ddmmyyyyOnlyMatch; return `${y}-${m}-${d}`; }
-    if (dateStr.includes('T') || dateStr.match(/^\d{4}-\d{2}-\d{2}/)) return dateStr;
-    return null;
-  };
-
-  const parseTradeDate = (dateStr: string | undefined | null): string => {
-    if (!dateStr) return new Date().toISOString().split('T')[0];
-    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
-    const ddmmyyyyMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-    if (ddmmyyyyMatch) { const [, d, m, y] = ddmmyyyyMatch; return `${y}-${m}-${d}`; }
-    const ddmmyyyyWithTimeMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2}):(\d{2})$/);
-    if (ddmmyyyyWithTimeMatch) { const [, d, m, y] = ddmmyyyyWithTimeMatch; return `${y}-${m}-${d}`; }
-    if (dateStr.includes('T')) return dateStr.split('T')[0];
-    return dateStr;
-  };
-
-  const getSessionFromTime = (timeStr: string | undefined | null, timezone: TimezoneOption): string => {
-    if (!timeStr) return "Unknown";
-    try {
-      const date = new Date(timeStr);
-      if (timezone === "Europe/London") {
-        const hour = date.getUTCHours();
-        if (hour >= 8 && hour < 12) return "London";
-        if (hour >= 13 && hour < 17) return "New York";
-        if (hour >= 21 || hour < 2) return "Asian";
-      } else {
-        const hour = date.getHours();
-        if (hour >= 8 && hour < 12) return "London";
-        if (hour >= 13 && hour < 17) return "New York";
-        if (hour >= 21 || hour < 2) return "Asian";
-      }
-      return "Unknown";
-    } catch {
-      return "Unknown";
     }
   };
 
@@ -753,12 +645,12 @@ export default function AIChat() {
     }));
 
     // Send image as separate imageBase64 parameter if present
-    const requestBody: any = {
+    const requestBody: ChatApiRequestBody = {
       messages: chatMessages,
       traderContext,
       strategyRules: activeRules.length > 0 ? activeRules : undefined,
     };
-    
+
     if (userMessage.image) {
       requestBody.imageBase64 = userMessage.image;
     }
@@ -1038,71 +930,12 @@ export default function AIChat() {
           </div>
         )}
 
-        {/* Text Paste Mode */}
-        {textPasteMode && (
-          <div className="border-t border-border/50 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Trade Data Input
-              </Label>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => setTextPasteMode(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <textarea
-              value={pastedText}
-              onChange={e => setPastedText(e.target.value)}
-              placeholder="Paste your trade history here...&#10;Example:&#10;XAUUSD  TAKE_PROFIT  2026.04.23, 13:24:30&#10;0.02&#10;$4,729.72&#10;..."
-              className="w-full h-48 p-3 text-xs font-mono border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              disabled={isParsingText}
-            />
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleTextPasteExtraction} 
-                disabled={isParsingText || !pastedText.trim()}
-                className="flex-1 gap-2"
-              >
-                {isParsingText ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    Parsing...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4" />
-                    Extract Trades from Text
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={() => { setPastedText(""); setTextPasteMode(false); }}>
-                Cancel
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Works with copy-pasted trade history from MT4/MT5 or prop firm dashboards.
-            </p>
-          </div>
-        )}
-
         {/* Input Area */}
         <div className="border-t border-border/50 p-3 space-y-3">
           <div className="flex gap-2">
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isLoading || textPasteMode} title="Upload screenshot (auto-detects)">
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileInputRef.current?.click()} disabled={isLoading} title="Upload screenshot (auto-detects)">
               <ImagePlus className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant={textPasteMode ? "default" : "outline"} 
-              size="icon" 
-              className="h-9 w-9 shrink-0" 
-              onClick={() => setTextPasteMode(!textPasteMode)} 
-              disabled={isLoading}
-              title="Paste trade history text"
-            >
-              <FileText className="h-4 w-4" />
             </Button>
             <Button
               variant={isListening ? "destructive" : "outline"}

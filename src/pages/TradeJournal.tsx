@@ -7,6 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, TrendingUp, TrendingDown, Trash2, X, Pencil, Upload, RotateCcw, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TradeParser, { type ParsedTradeImport } from "@/components/TradeParser";
+import {
+  parseImportedOpenCloseTime,
+  parseImportedTradeDate,
+  sessionFromOpenTime,
+  type TradeImportTimezone,
+} from "@/lib/tradeImportFormat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +26,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EMOTION_TAGS, MISTAKE_TAGS, getEmotionTagStyle, getMistakeTagLabel } from "@/lib/tradeCalculations";
 import { AIExtractButton } from "@/components/trade/AIExtractButton";
 import * as XLSX from 'xlsx';
+import type { Database } from "@/integrations/supabase/database.types";
+
+type TradeInsert = Database["public"]["Tables"]["trades"]["Insert"];
+type TradeUpdate = Database["public"]["Tables"]["trades"]["Update"];
+type PropFirmProfitPick = Pick<
+  Database["public"]["Tables"]["prop_firms"]["Row"],
+  "current_profit" | "balance"
+>;
 
 interface PropFirm {
   id: string;
@@ -101,6 +117,8 @@ export default function TradeJournal() {
   const [parsedTrades, setParsedTrades] = useState<ParsedTrade[]>([]);
   const [parsedAccountInfo, setParsedAccountInfo] = useState<{account?: string; company?: string}>({});
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [addTradeTab, setAddTradeTab] = useState<"manual" | "parser">("manual");
+  const [journalPastedImports, setJournalPastedImports] = useState<ParsedTradeImport[]>([]);
 
   interface ParsedTrade {
     openTime: string;
@@ -129,6 +147,7 @@ export default function TradeJournal() {
   useEffect(() => {
     fetchTrades();
     fetchPropFirms();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when date filter changes only
   }, [dateFilter]);
 
   // Real-time subscription for new trades from MT5 bridge
@@ -297,7 +316,7 @@ export default function TradeJournal() {
     }
 
     // Find account info from first rows (often in first few rows before table)
-    let accountInfo: {account?: string; company?: string} = {};
+    const accountInfo: {account?: string; company?: string} = {};
     let dataStartRow = 0;
     
     for (let i = 0; i < Math.min(10, jsonData.length); i++) {
@@ -494,8 +513,8 @@ export default function TradeJournal() {
         swap: trade.swap,
       }));
 
-      const { error } = await supabase.from("trades").insert(tradesToInsert as any);
-      
+      const { error } = await supabase.from("trades").insert(tradesToInsert as TradeInsert[]);
+
       if (error) throw error;
 
       toast({
@@ -510,6 +529,133 @@ export default function TradeJournal() {
       toast({
         title: "Error importing trades",
         description: error instanceof Error ? error.message : "Failed to save trades",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportPastedTrades = async () => {
+    if (journalPastedImports.length === 0) return;
+
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Error", description: "You must be logged in", variant: "destructive" });
+        return;
+      }
+
+      let cycleId: string | null = null;
+      const propFirmId = formData.prop_firm_id === "none" ? null : formData.prop_firm_id || null;
+
+      if (propFirmId) {
+        const selectedFirm = propFirms.find(f => f.id === propFirmId);
+        if (selectedFirm?.account_type === "Funded") {
+          if (formData.cycle_id && formData.cycle_id !== "active") {
+            cycleId = formData.cycle_id;
+          } else {
+            const { data: activeCycleData } = await supabase
+              .from("account_cycles")
+              .select("id")
+              .eq("prop_firm_id", propFirmId)
+              .eq("status", "active")
+              .single();
+
+            if (activeCycleData && typeof activeCycleData === "object" && "id" in activeCycleData) {
+              cycleId = (activeCycleData as { id: string }).id;
+            }
+          }
+        }
+      }
+
+      const tz: TradeImportTimezone = "Europe/London";
+      const tradesToInsert = journalPastedImports.map((trade) => ({
+        user_id: user.id,
+        prop_firm_id: propFirmId,
+        cycle_id: cycleId,
+        pair: trade.pair,
+        profit: trade.profit,
+        volume: trade.volume ?? null,
+        trade_type: trade.trade_type?.toLowerCase() || null,
+        entry_price: trade.entry_price ?? null,
+        close_price: trade.close_price ?? null,
+        open_time: parseImportedOpenCloseTime(trade.open_time),
+        close_time: parseImportedOpenCloseTime(trade.close_time),
+        trade_date: parseImportedTradeDate(trade.trade_date),
+        session: sessionFromOpenTime(trade.open_time, tz),
+        emotion: null,
+        notes: trade.notes || "Imported from Trade Journal (paste)",
+        screenshot_url: null,
+        screenshots: [],
+        take_profit: null,
+        stop_loss: null,
+        emotion_tag: null,
+        rule_broken: false,
+        mistake_tags: null,
+        extracted_from_screenshot: false,
+        ai_extraction_metadata: {
+          source: "trade_journal_text",
+          imported_at: new Date().toISOString(),
+        },
+      }));
+
+      const { error } = await supabase.from("trades").insert(tradesToInsert as TradeInsert[]);
+      if (error) throw error;
+
+      if (propFirmId) {
+        const totalProfit = journalPastedImports.reduce((s, t) => s + t.profit, 0);
+        const { data: propFirm } = await supabase
+          .from("prop_firms")
+          .select("current_profit, balance")
+          .eq("id", propFirmId)
+          .single();
+
+        const pf = propFirm as PropFirmProfitPick | null;
+        if (pf) {
+          const newProfit = (pf.current_profit || 0) + totalProfit;
+          const newEquity = (pf.balance || 0) + newProfit;
+          await supabase
+            .from("prop_firms")
+            .update({ current_profit: newProfit, equity: newEquity })
+            .eq("id", propFirmId);
+        }
+      }
+
+      toast({
+        title: "Imported",
+        description: `${journalPastedImports.length} trade${journalPastedImports.length > 1 ? "s" : ""} saved to your journal.`,
+      });
+
+      setOpen(false);
+      setAddTradeTab("manual");
+      setJournalPastedImports([]);
+      setFormData({
+        pair: "",
+        profit: "",
+        session: "",
+        emotion: "",
+        notes: "",
+        prop_firm_id: "",
+        cycle_id: "",
+        trade_date: new Date().toISOString().split("T")[0],
+        trade_type: "",
+        volume: "",
+        entry_price: "",
+        take_profit: "",
+        stop_loss: "",
+        close_price: "",
+        emotion_tag: "",
+        rule_broken: false,
+        mistake_tags: [],
+      });
+      fetchTrades();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Failed to import pasted trades",
         variant: "destructive",
       });
     } finally {
@@ -568,10 +714,10 @@ export default function TradeJournal() {
               .select("id")
               .eq("prop_firm_id", propFirmId)
               .eq("status", "active")
-              .single() as any;
-            
-            if (activeCycleData) {
-              cycleId = activeCycleData.id;
+              .single();
+
+            if (activeCycleData && typeof activeCycleData === "object" && "id" in activeCycleData) {
+              cycleId = (activeCycleData as { id: string }).id;
             }
           }
         }
@@ -600,7 +746,7 @@ export default function TradeJournal() {
         emotion_tag: formData.emotion_tag || null,
         rule_broken: formData.rule_broken,
         mistake_tags: formData.mistake_tags.length > 0 ? formData.mistake_tags : null,
-      } as any);
+      } as TradeInsert);
 
       if (error) throw error;
 
@@ -610,20 +756,21 @@ export default function TradeJournal() {
           .from("prop_firms")
           .select("current_profit, balance")
           .eq("id", formData.prop_firm_id)
-          .single() as any;
+          .single();
 
-        if (propFirm) {
+        const pf = propFirm as PropFirmProfitPick | null;
+        if (pf) {
           const tradeProfit = parseFloat(formData.profit);
-          const newProfit = (propFirm.current_profit || 0) + tradeProfit;
-          const newEquity = (propFirm.balance || 0) + newProfit;
-          
-          await (supabase
+          const newProfit = (pf.current_profit || 0) + tradeProfit;
+          const newEquity = (pf.balance || 0) + newProfit;
+
+          await supabase
             .from("prop_firms")
-            .update({ 
+            .update({
               current_profit: newProfit,
-              equity: newEquity
+              equity: newEquity,
             })
-            .eq("id", formData.prop_firm_id) as any);
+            .eq("id", formData.prop_firm_id);
         }
       }
 
@@ -721,7 +868,7 @@ export default function TradeJournal() {
         updatedScreenshots = [...(tradeToEdit.screenshots || []), publicUrl];
       }
 
-      const { error } = await (supabase
+      const { error } = await supabase
         .from("trades")
         .update({
           pair: formData.pair,
@@ -740,8 +887,8 @@ export default function TradeJournal() {
           take_profit: formData.take_profit ? parseFloat(formData.take_profit) : null,
           stop_loss: formData.stop_loss ? parseFloat(formData.stop_loss) : null,
           close_price: formData.close_price ? parseFloat(formData.close_price) : null,
-        })
-        .eq("id", tradeToEdit.id) as any);
+        } as TradeUpdate)
+        .eq("id", tradeToEdit.id);
 
       if (error) throw error;
 
@@ -807,19 +954,20 @@ export default function TradeJournal() {
           .from("prop_firms")
           .select("current_profit, balance")
           .eq("id", tradeToDelete.prop_firm_id)
-          .single() as any;
+          .single();
 
-        if (propFirm) {
-          const newProfit = (propFirm.current_profit || 0) - Number(tradeToDelete.profit);
-          const newEquity = (propFirm.balance || 0) + newProfit;
-          
-          await (supabase
+        const pf = propFirm as PropFirmProfitPick | null;
+        if (pf) {
+          const newProfit = (pf.current_profit || 0) - Number(tradeToDelete.profit);
+          const newEquity = (pf.balance || 0) + newProfit;
+
+          await supabase
             .from("prop_firms")
-            .update({ 
+            .update({
               current_profit: newProfit,
-              equity: newEquity
+              equity: newEquity,
             })
-            .eq("id", tradeToDelete.prop_firm_id) as any);
+            .eq("id", tradeToDelete.prop_firm_id);
         }
       }
 
@@ -884,7 +1032,16 @@ export default function TradeJournal() {
             </Badge>
           )}
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next) {
+              setAddTradeTab("manual");
+              setJournalPastedImports([]);
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 sm:h-9 px-3 text-sm shrink-0">
               <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
@@ -895,7 +1052,7 @@ export default function TradeJournal() {
             <DialogHeader>
               <DialogTitle>Add New Trade</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <div className="space-y-4 pt-2 border-b pb-4">
               <div className="space-y-2">
                 <Label>Prop Firm (Optional)</Label>
                 <Select
@@ -911,7 +1068,6 @@ export default function TradeJournal() {
                   <SelectContent className="z-50">
                     <SelectItem value="none">None</SelectItem>
                     {(() => {
-                      // Case-insensitive unique prop firm names
                       const normalizeCase = (name: string) => name.trim().toLowerCase();
                       const uniqueNamesMap = new Map<string, string>();
                       propFirms.forEach(f => {
@@ -958,7 +1114,6 @@ export default function TradeJournal() {
                   </Select>
                 </div>
               )}
-              {/* Cycle selector for funded accounts */}
               {(() => {
                 const selectedFirm = propFirms.find(f => f.id === formData.prop_firm_id);
                 if (selectedFirm?.account_type === 'Funded') {
@@ -993,6 +1148,14 @@ export default function TradeJournal() {
                 }
                 return null;
               })()}
+            </div>
+            <Tabs value={addTradeTab} onValueChange={(v) => setAddTradeTab(v as "manual" | "parser")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mt-2">
+                <TabsTrigger value="manual">Manual entry</TabsTrigger>
+                <TabsTrigger value="parser">Paste / parse</TabsTrigger>
+              </TabsList>
+              <TabsContent value="manual" className="mt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="pair">Currency Pair *</Label>
                 <Input
@@ -1231,6 +1394,26 @@ export default function TradeJournal() {
                 {isLoading ? "Saving..." : "Save Trade"}
               </Button>
             </form>
+              </TabsContent>
+              <TabsContent value="parser" className="mt-4 space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  Trades use the account and cycle selected above when provided. Paste history from MT4/MT5 or your firm; we try structured parsing first, then AI.
+                </p>
+                <TradeParser onTradesExtracted={setJournalPastedImports} />
+                <Button
+                  type="button"
+                  onClick={handleImportPastedTrades}
+                  disabled={isLoading || journalPastedImports.length === 0}
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
+                  {isLoading
+                    ? "Importing…"
+                    : journalPastedImports.length === 0
+                      ? "Import parsed trades"
+                      : `Import ${journalPastedImports.length} trade${journalPastedImports.length === 1 ? "" : "s"}`}
+                </Button>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
