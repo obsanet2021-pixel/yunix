@@ -1175,5 +1175,6 @@ export default function AIChat() {
         </div>
       </Card>
     </div>
+  </div>
   );
 }
