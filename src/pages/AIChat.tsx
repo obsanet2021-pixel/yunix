@@ -35,6 +35,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import StrategyRulesPanel from "@/components/StrategyRulesPanel";
 import ReactMarkdown from "react-markdown";
 import { parseTradeTextWithAI, parseTradeHistoryText, ParsedTrade } from "@/lib/tradeTextParser";
+import TradeParser from "@/components/TradeParser";
 
 type Message = {
   role: "user" | "assistant";
@@ -78,6 +79,7 @@ interface PropFirm {
   id: string;
   name: string;
   account_type: string;
+  state?: string;
 }
 
 interface Conversation {
@@ -121,6 +123,7 @@ export default function AIChat() {
   const [textPasteMode, setTextPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [isParsingText, setIsParsingText] = useState(false);
+  const [showTradeParser, setShowTradeParser] = useState(false);
   
   // Trade extraction states
   const [extractedTrades, setExtractedTrades] = useState<ExtractedTradeData[]>([]);
@@ -155,7 +158,7 @@ export default function AIChat() {
   const fetchPropFirms = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from("prop_firms").select("id, name, account_type").eq("user_id", user.id).order("name");
+    const { data } = await supabase.from("prop_firms").select("id, name, account_type, state").eq("user_id", user.id).order("name");
     if (data) setPropFirms(data);
   };
 
@@ -471,21 +474,10 @@ export default function AIChat() {
         // Add system message about extraction
         const extractionMessage: Message = {
           role: "assistant",
-          content: `📊 **Extracted ${trades.length} Trade${trades.length > 1 ? 's' : ''}!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the trades below and click "Save All Trades" to add them to your journal! 👇`,
+          content: `📊 **Extracted ${trades.length} Trade${trades.length > 1 ? 's' : ''}!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the trades below and click **Save to Journal** to store them in your real journal database. Once saved, they will appear in Trade Journal, Trade Management, and Analytics. 👇`,
           extractedTrades: trades
         };
         setMessages(prev => [...prev, extractionMessage]);
-        
-        toast({
-          title: "Trades Extracted!",
-          description: `Found ${trades.length} trades. Review and save them below.`,
-        });
-      } else {
-        // No trades found - let user know they can still chat about the image
-        toast({
-          title: "No Trades Found",
-          description: "Could not extract trades from this image. You can still chat with AI about it!",
-        });
       }
     };
     reader.readAsDataURL(file);
@@ -494,100 +486,6 @@ export default function AIChat() {
   const clearImage = () => {
     setUploadedImage(null);
     setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const file = e.dataTransfer.files?.[0];
-    if (file) processImage(file);
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) { processImage(file); e.preventDefault(); break; }
-      }
-    }
-  };
-
-  // ============ TRADE EXTRACTION ============
-  const extractTradesFromImage = async (imageBase64: string): Promise<ExtractedTradeData[]> => {
-    setIsExtracting(true);
-    try {
-      const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
-      
-      // Validate image size
-      const imageSizeKB = Math.round(base64Data.length * 0.75 / 1024);
-      console.log(`Image size: ${imageSizeKB} KB, base64 length: ${base64Data.length}`);
-      
-      if (imageSizeKB > 5000) { // 5MB limit
-        toast({
-          title: "Image Too Large",
-          description: "Please upload an image smaller than 5MB.",
-          variant: "destructive",
-        });
-        return [];
-      }
-      
-      console.log("📤 Sending image to extract-trade function...");
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-trade`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY}` 
-        },
-        body: JSON.stringify({ imageBase64: base64Data })
-      });
-      
-      console.log("📥 Extract-trade response status:", response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        console.error("Extract trades HTTP error:", response.status, errorData);
-        
-        // Use sanitized error message from server (details field removed for security)
-        const errorMessage = errorData.error || "Unable to analyze screenshot. Please try again.";
-        toast({
-          title: "Extraction Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return [];
-      }
-      
-      const data = await response.json();
-      console.log("Extract trades response:", data);
-      
-      if (data.success && data.trades?.length > 0) {
-        console.log(`✅ Extracted ${data.trades.length} trades via ${data.source || 'unknown'}`);
-        return data.trades as ExtractedTradeData[];
-      }
-      
-      if (data.success && data.trade) {
-        return [data.trade as ExtractedTradeData];
-      }
-      
-      // No trades found but request succeeded
-      console.log("ℹ️ No trades found in image");
-      return [];
-      
-    } catch (error) {
-      console.error("Extract trades error:", error);
-      toast({
-        title: "Extraction Error",
-        description: error instanceof Error ? error.message : "Failed to analyze image. Please try again.",
-        variant: "destructive",
-      });
-      return [];
-    } finally {
-      setIsExtracting(false);
-    }
   };
 
   // ============ TEXT PASTE EXTRACTION ============
@@ -636,6 +534,13 @@ export default function AIChat() {
           description: `${convertedTrades.length} trades extracted from text. Total P&L: $${totalProfit.toFixed(2)}`,
         });
         
+        // Add assistant message for text parsing
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `📊 **Parsed ${convertedTrades.length} Trade${convertedTrades.length > 1 ? 's' : ''} from text!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the table below and click **Save to Journal** to store them in your journal database for Journal, Trade Management, and Analytics. 👇`,
+          extractedTrades: convertedTrades
+        }]);
+        
         // Clear the text area after successful extraction
         setPastedText("");
         setTextPasteMode(false);
@@ -658,6 +563,67 @@ export default function AIChat() {
     }
   };
 
+  // ============ SAVE TRADES ============
+  const saveTradesToJournal = async () => {
+    if (extractedTrades.length === 0) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast({ title: "Not logged in", variant: "destructive" }); return; }
+
+    setIsSavingTrades(true);
+    try {
+      const tradesToInsert = extractedTrades.map(trade => ({
+        user_id: user.id,
+        prop_firm_id: selectedPropFirmId !== "none" ? selectedPropFirmId : null,
+        cycle_id: cycleId,
+        pair: trade.pair,
+        profit: trade.profit,
+        volume: trade.volume,
+        trade_type: trade.trade_type.toLowerCase(),
+        entry_price: trade.entry_price,
+        close_price: trade.close_price,
+        open_time: parseDateTime(trade.open_time),
+        close_time: parseDateTime(trade.close_time),
+        trade_date: parseTradeDate(trade.trade_date),
+        session: getSessionFromTime(trade.open_time, screenshotTimezone),
+        screenshot_url: screenshotUrl,
+        notes: trade.notes || "Imported from AI Chat",
+        extracted_from_screenshot: Boolean(uploadedImage),
+        ai_extraction_metadata: {
+          source: uploadedImage ? "ai_chat_image" : "ai_chat_text",
+          imported_at: new Date().toISOString(),
+          original_open_time: trade.open_time || null,
+          original_close_time: trade.close_time || null,
+          original_session: trade.session || null,
+          pips: trade.pips ?? null,
+          gain: trade.gain ?? null,
+        },
+      }));
+
+      const { error } = await supabase.from("trades").insert(tradesToInsert as any[]);
+      if (error) throw error;
+
+      const totalProfit = extractedTrades.reduce((sum, t) => sum + t.profit, 0);
+      toast({ title: `${extractedTrades.length} trades saved to journal! ✅`, description: `Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}` });
+      
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `✅ **Saved ${extractedTrades.length} trade${extractedTrades.length > 1 ? 's' : ''} to your journal database.**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nThey are now available in Trade Journal, Trade Management, and Analytics. 💪` 
+      }]);
+      
+      setExtractedTrades([]);
+      clearImage();
+    } catch (error) {
+      console.error("Save trades error:", error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save trades to journal. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingTrades(false);
+    }
+  };
+
   // ============ DATE/TIME HELPERS ============
   const parseDateTime = (dateStr: string | undefined | null): string | null => {
     if (!dateStr) return null;
@@ -676,462 +642,379 @@ export default function AIChat() {
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
     const ddmmyyyyMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (ddmmyyyyMatch) { const [, d, m, y] = ddmmyyyyMatch; return `${y}-${m}-${d}`; }
-    return new Date().toISOString().split('T')[0];
+    const ddmmyyyyWithTimeMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2}):(\d{2})$/);
+    if (ddmmyyyyWithTimeMatch) { const [, d, m, y] = ddmmyyyyWithTimeMatch; return `${y}-${m}-${d}`; }
+    if (dateStr.includes('T')) return dateStr.split('T')[0];
+    return dateStr;
   };
 
-  const getSessionFromTime = (timeStr: string | undefined | null, timezone: TimezoneOption): string | null => {
-    if (!timeStr) return null;
-    const fullMatch = timeStr.match(/(\d{2}):(\d{2}):(\d{2})/);
-    if (!fullMatch) return null;
-    const hour = parseInt(fullMatch[1], 10);
-    const utcHour = timezone === "Europe/London" ? hour : (hour + 5) % 24;
-    if (utcHour >= 0 && utcHour < 8) return "Asia";
-    if (utcHour >= 8 && utcHour < 13) return "London";
-    if (utcHour >= 13 && utcHour < 21) return "New York";
-    return "Asia";
-  };
-
-  // ============ SAVE TRADES ============
-  const saveAllTrades = async () => {
-    if (extractedTrades.length === 0) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast({ title: "Not logged in", variant: "destructive" }); return; }
-
-    setIsSavingTrades(true);
+  const getSessionFromTime = (timeStr: string | undefined | null, timezone: TimezoneOption): string => {
+    if (!timeStr) return "Unknown";
     try {
-      let screenshotUrl: string | null = null;
-      let cycleId: string | null = null;
+      const date = new Date(timeStr);
+      if (timezone === "Europe/London") {
+        const hour = date.getUTCHours();
+        if (hour >= 8 && hour < 12) return "London";
+        if (hour >= 13 && hour < 17) return "New York";
+        if (hour >= 21 || hour < 2) return "Asian";
+      } else {
+        const hour = date.getHours();
+        if (hour >= 8 && hour < 12) return "London";
+        if (hour >= 13 && hour < 17) return "New York";
+        if (hour >= 21 || hour < 2) return "Asian";
+      }
+      return "Unknown";
+    } catch {
+      return "Unknown";
+    }
+  };
 
-      if (imagePreview && uploadedImage) {
-        const fileName = `${user.id}/${Date.now()}-${uploadedImage.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from("prop-firm-screenshots").upload(fileName, uploadedImage);
-        if (!uploadError && uploadData) {
-          const { data: { publicUrl } } = supabase.storage.from("prop-firm-screenshots").getPublicUrl(fileName);
-          screenshotUrl = publicUrl;
-        }
+  // ============ TRADE EXTRACTION ============
+  const extractTradesFromImage = async (imageData: string): Promise<ExtractedTradeData[]> => {
+    setIsExtracting(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-trade`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ image: imageData }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to extract trades");
       }
 
-      if (selectedPropFirmId && selectedPropFirmId !== "none") {
-        const selectedFirm = propFirms.find(pf => pf.id === selectedPropFirmId);
-        if (selectedFirm?.account_type === "Funded") {
-          const { data: cycleData } = await supabase.from("account_cycles").select("id").eq("prop_firm_id", selectedPropFirmId).eq("status", "active").single();
-          if (cycleData) cycleId = cycleData.id;
-        }
-      }
-
-      const tradesToInsert = extractedTrades.map(trade => ({
-        user_id: user.id,
-        prop_firm_id: selectedPropFirmId !== "none" ? selectedPropFirmId : null,
-        cycle_id: cycleId,
-        pair: trade.pair,
-        profit: trade.profit,
-        volume: trade.volume,
-        trade_type: trade.trade_type.toLowerCase(),
-        entry_price: trade.entry_price,
-        close_price: trade.close_price,
-        open_time: parseDateTime(trade.open_time),
-        close_time: parseDateTime(trade.close_time),
-        trade_date: parseTradeDate(trade.trade_date),
-        session: getSessionFromTime(trade.open_time, screenshotTimezone),
-        screenshot_url: screenshotUrl,
-        notes: trade.notes || null,
-      }));
-
-      const { error: insertError } = await supabase.from("trades").insert(tradesToInsert);
-      if (insertError) throw insertError;
-
-      const totalProfit = extractedTrades.reduce((sum, t) => sum + t.profit, 0);
-      toast({ title: `${extractedTrades.length} trades saved! ✅`, description: `Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}` });
+      const data = await response.json();
+      const trades: ExtractedTradeData[] = data.trades || [];
       
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: `All ${extractedTrades.length} trades saved successfully! 🎉\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nView them in Trade Journal, Trade Management, and Analytics! 💪`
-      }]);
+      if (trades.length === 0) {
+        toast({
+          title: "No Trades Found",
+          description: "Could not extract any trades from the image. Please ensure the image shows clear trade data.",
+          variant: "destructive",
+        });
+      }
 
-      setExtractedTrades([]);
-      setSelectedPropFirmId("none");
-      clearImage();
+      return trades;
     } catch (error) {
-      console.error("Save trades error:", error);
-      toast({ title: "Save failed", description: "Could not save trades.", variant: "destructive" });
+      console.error("Extract trades error:", error);
+      toast({
+        title: "Extraction Error",
+        description: error instanceof Error ? error.message : "Failed to analyze image. Please try again.",
+        variant: "destructive",
+      });
+      return [];
     } finally {
-      setIsSavingTrades(false);
+      setIsExtracting(false);
     }
   };
 
-  // ============ SEND MESSAGE ============
+  // ============ CHAT HANDLING ============
   const handleSend = async () => {
-    if ((!input.trim() && !imagePreview) || isLoading) return;
+    if (!input.trim() && !imagePreview) return;
+    if (isLoading) return;
 
-    const userMessage: Message = { 
-      role: "user", 
-      content: input || "Analyze this image",
-      image: imagePreview || undefined
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
     setIsLoading(true);
+    const userMessage: Message = { role: "user", content: input.trim(), image: imagePreview || undefined };
+    setMessages(prev => [...prev, userMessage]);
 
-    let conversationId = currentConversationId;
-    if (!conversationId) {
-      conversationId = await createConversation();
-      if (conversationId) setCurrentConversationId(conversationId);
+    // If image is present, extract trades first
+    if (imagePreview && uploadedImage) {
+      const trades = await extractTradesFromImage(imagePreview);
+      
+      if (trades.length > 0) {
+        setExtractedTrades(trades);
+        const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
+        
+        const extractionMessage: Message = {
+          role: "assistant",
+          content: `🎯 **Found ${trades.length} trade${trades.length > 1 ? 's' : ''}!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nSelect an account and click **Save to Journal** to store them in your real journal database. 👇`,
+          extractedTrades: trades
+        };
+        setMessages(prev => [...prev, extractionMessage]);
+        setIsLoading(false);
+        return;
+      }
+      // If extraction fails or no trades found, add extraction context to message for AI chat
+      userMessage.content = input.trim() ? `${input}\n\n[User also shared an image - extraction found no trades]` : "Analyze this trade image";
+      // Ensure image is preserved in the message for AI analysis
+      userMessage.image = imagePreview;
     }
-    if (conversationId) await saveMessage(userMessage, conversationId);
+
+    // Build deep context + strategy rules
+    const traderContext = await buildDeepTraderContext();
+    const activeRules = strategyRules.filter(r => r.is_active).map(r => r.rule_text);
+
+    const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+    const chatMessages = messages.concat(userMessage).map(m => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // Send image as separate imageBase64 parameter if present
+    const requestBody: any = {
+      messages: chatMessages,
+      traderContext,
+      strategyRules: activeRules.length > 0 ? activeRules : undefined,
+    };
+    
+    if (userMessage.image) {
+      requestBody.imageBase64 = userMessage.image;
+    }
 
     try {
-      // If image is present, try extraction first (regardless of text input)
-      if (imagePreview) {
-        const trades = await extractTradesFromImage(imagePreview);
-        if (trades.length > 0) {
-          setExtractedTrades(trades);
-          const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
-          const extractionMessage: Message = {
-            role: "assistant",
-            content: `Found ${trades.length} trade${trades.length > 1 ? 's' : ''}! 🎯\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nSelect an account and click "Save All Trades" to add them to your journal! 👇`,
-            extractedTrades: trades
-          };
-          setMessages(prev => [...prev, extractionMessage]);
-          if (conversationId) await saveMessage({ role: "assistant", content: extractionMessage.content }, conversationId);
-          clearImage();
-          setIsLoading(false);
-          return;
-        }
-        // If extraction fails or no trades found, add extraction context to message for AI chat
-        userMessage.content = input.trim() ? `${input}\n\n[User also shared an image - extraction found no trades]` : "Analyze this trade image";
-        // Ensure image is preserved in the message for AI analysis
-        userMessage.image = imagePreview;
-      }
-
-      // Build deep context + strategy rules
-      const traderContext = await buildDeepTraderContext();
-      const activeRules = strategyRules.filter(r => r.is_active).map(r => r.rule_text);
-
-      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
-      
-      // Prepare messages without image data for cleaner JSON
-      const chatMessages = [...messages.map(m => ({ role: m.role, content: m.content })), 
-        { role: userMessage.role, content: userMessage.content }];
-      
-      // Send image as separate imageBase64 parameter if present
-      const requestBody: any = {
-        messages: chatMessages,
-        traderContext,
-        strategyRules: activeRules.length > 0 ? activeRules : undefined,
-      };
-      
-      if (userMessage.image) {
-        const imageBase64 = userMessage.image.startsWith("data:") 
-          ? userMessage.image.split(",")[1] 
-          : userMessage.image;
-        requestBody.imageBase64 = imageBase64;
-        console.log("Sending image to AI chat, length:", imageBase64?.length);
-      }
-      
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY}`
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
-      if (response.status === 429) {
-        toast({ title: "Rate Limit", description: "Too many requests. Please try again later.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-      if (response.status === 402) {
-        toast({ title: "Payment Required", description: "Please add credits to continue.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-      if (!response.ok || !response.body) throw new Error("Failed to start stream");
+      if (!response.ok) throw new Error("Failed to get response");
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let streamDone = false;
-      let assistantContent = "";
-
-      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
-      clearImage();
-
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") { streamDone = true; break; }
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage.role === "assistant") lastMessage.content = assistantContent;
-                return newMessages;
-              });
-            }
-          } catch { textBuffer = line + "\n" + textBuffer; break; }
-        }
-      }
-
-      // Final flush
-      if (textBuffer.trim()) {
-        for (let raw of textBuffer.split("\n")) {
-          if (!raw) continue;
-          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-          if (raw.startsWith(":") || raw.trim() === "") continue;
-          if (!raw.startsWith("data: ")) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              assistantContent += content;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage.role === "assistant") lastMessage.content = assistantContent;
-                return newMessages;
-              });
-            }
-          } catch { /* ignore */ }
-        }
-      }
-
-      if (conversationId && assistantContent) {
-        await saveMessage({ role: "assistant", content: assistantContent }, conversationId);
-      }
+      const data = await response.json();
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: data.response,
+        chartAnalysis: data.chartAnalysis,
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setChartAnalysis(data.chartAnalysis || null);
     } catch (error) {
-      console.error("Error:", error);
-      toast({ title: "Error", description: "Failed to send message.", variant: "destructive" });
-      setMessages(prev => {
-        const newMessages = [...prev];
-        if (newMessages[newMessages.length - 1]?.content === "") newMessages.pop();
-        return newMessages;
+      console.error("Chat error:", error);
+      toast({
+        title: "Chat Error",
+        description: "Failed to get response from AI. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+      setInput("");
+      clearImage();
     }
   };
 
-  // Quick action buttons
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) processImage(file);
+        e.preventDefault();
+        break;
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) processImage(file);
+  };
+
+  // ============ QUICK ACTIONS ============
   const quickActions = [
-    { label: "Win Rate", icon: Percent, query: "What's my current win rate and how can I improve it?" },
-    { label: "Weekly P/L", icon: TrendingUp, query: "How did I perform this week? Any insights?" },
-    { label: "Best Trade", icon: Award, query: "What was my best trade recently and why?" },
-    { label: "Strategy Check", icon: Shield, query: "Does my recent trading align with my strategy rules? Any violations?" },
-    { label: "My Weaknesses", icon: Brain, query: "What are my biggest recurring mistakes and weaknesses? How can I fix them?" },
+    { icon: TrendingUp, label: "Performance", query: "How am I performing this week?" },
+    { icon: Target, label: "Mistakes", query: "What are my most common mistakes?" },
+    { icon: Award, label: "Best setups", query: "What are my most profitable setups?" },
+    { icon: BarChart3, label: "Analytics", query: "Show me my trading analytics" },
+    { icon: Percent, label: "Win rate", query: "What's my current win rate?" },
+    { icon: BookOpen, label: "Strategy", query: "Review my strategy rules" },
+    { icon: Shield, label: "Risk", query: "Am I managing risk properly?" },
+    { icon: Brain, label: "Mindset", query: "Help me improve my trading psychology" },
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)]">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold">AI Coach</h1>
-          <Badge variant="outline" className="text-[10px] px-1.5 gap-1">
-            <Brain className="h-2.5 w-2.5" />
-            Learning
-          </Badge>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <div className="w-64 border-r border-border bg-card">
+        <div className="p-4 border-b border-border">
+          <h1 className="text-lg font-semibold flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            YUNIX AI Coach
+          </h1>
         </div>
-        <div className="flex gap-2">
-          <Collapsible open={strategyOpen} onOpenChange={setStrategyOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-8">
-                <BookOpen className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline text-xs">Strategy</span>
-                {strategyOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
-            </CollapsibleTrigger>
-          </Collapsible>
-          <Button variant="outline" size="sm" onClick={startNewChat} className="gap-1.5 h-8">
-            <Plus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline text-xs">New</span>
+        
+        {/* New Chat Button */}
+        <div className="p-4">
+          <Button onClick={startNewChat} className="w-full gap-2">
+            <Plus className="h-4 w-4" />
+            New Chat
           </Button>
+        </div>
+
+        {/* Chat History */}
+        <div className="flex-1 overflow-hidden">
           <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-8">
-                <History className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline text-xs">History</span>
+              <Button variant="ghost" className="w-full justify-start gap-2 px-4">
+                <History className="h-4 w-4" />
+                Chat History
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[320px] sm:w-[400px]">
+            <SheetContent side="left" className="w-80">
               <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <History className="h-5 w-5" />
-                  Chat History
-                </SheetTitle>
+                <SheetTitle>Chat History</SheetTitle>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-100px)] mt-4">
-                {conversations.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No chat history yet</p>
+              <ScrollArea className="flex-1 mt-4">
+                {conversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className="p-3 hover:bg-accent rounded cursor-pointer flex items-center justify-between group"
+                    onClick={() => loadConversation(conv.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{conv.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(conv.updated_at), "MMM d, h:mm a")}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => deleteConversation(e, conv.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-2 pr-4">
-                    {conversations.map((conv) => (
-                      <div
-                        key={conv.id}
-                        onClick={() => loadConversation(conv.id)}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors group flex items-start justify-between gap-2 ${
-                          currentConversationId === conv.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50 hover:bg-muted"
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm truncate">{conv.title}</p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(conv.updated_at), "MMM d, h:mm a")}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => deleteConversation(e, conv.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                ))}
               </ScrollArea>
             </SheetContent>
           </Sheet>
         </div>
+
+        {/* Strategy Rules */}
+        <div className="p-4 border-t border-border">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            onClick={() => setStrategyOpen(!strategyOpen)}
+          >
+            <Shield className="h-4 w-4" />
+            Strategy Rules
+            {strategyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+          <Collapsible open={strategyOpen} onOpenChange={setStrategyOpen}>
+            <CollapsibleContent className="mt-2">
+              <StrategyRulesPanel compact={true} />
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </div>
 
-      {/* Strategy Rules Panel (Collapsible) */}
-      <Collapsible open={strategyOpen} onOpenChange={setStrategyOpen}>
-        <CollapsibleContent>
-          <Card className="mb-3">
-            <CardContent className="p-4">
-              <StrategyRulesPanel onRulesChange={setStrategyRules} />
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Chat Container */}
-      <Card className="flex-1 flex flex-col min-h-0" onDragOver={handleDragOver} onDrop={handleDrop}>
-        <CardContent ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3" onPaste={handlePaste}>
-          {messages.map((message, index) => (
-            <div key={index} className={`flex gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-              {message.role === "assistant" && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-              )}
-              <div className={`rounded-xl px-3 py-2 max-w-[85%] ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                {message.image && (
-                  <img src={message.image} alt="Uploaded" className="max-w-full rounded-lg mb-2 max-h-48 object-contain" />
-                )}
-                {message.role === "assistant" ? (
-                  <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1 [&>ul]:my-1 [&>ol]:my-1">
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col">
+        <Card className="flex-1 flex flex-col min-h-0">
+          {/* Chat Messages */}
+          <CardContent ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3" onPaste={handlePaste}>
+            {messages.map((message, index) => (
+              <div key={index} className={`flex gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                {message.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
                   </div>
-                ) : (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                )}
+                <div className={`max-w-[80%] rounded-lg p-3 ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                  {message.role === "user" && message.image && (
+                    <img src={message.image} alt="User uploaded" className="max-h-48 rounded mb-2" />
+                  )}
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+                {message.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-primary-foreground" />
+                  </div>
                 )}
               </div>
-              {message.role === "user" && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <User className="h-4 w-4 text-secondary" />
+            ))}
+
+            {/* Extracted Trades Display */}
+            {extractedTrades.length > 0 && (
+              <div className="bg-card border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    📊 Extracted {extractedTrades.length} Trade{extractedTrades.length > 1 ? 's' : ''}
+                  </h3>
+                  <span className={`text-lg font-bold ${extractedTrades.reduce((sum, t) => sum + t.profit, 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {extractedTrades.reduce((sum, t) => sum + t.profit, 0) >= 0 ? '+' : ''}${extractedTrades.reduce((sum, t) => sum + t.profit, 0).toFixed(2)}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
-          
-          {/* Extracted Trades Table Card */}
-          {extractedTrades.length > 0 && (
-            <div className="mx-auto max-w-2xl">
-              <Card className="border-primary/30 bg-primary/5">
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      📊 Extracted {extractedTrades.length} Trade{extractedTrades.length > 1 ? 's' : ''}
-                    </h3>
-                    <span className={`text-lg font-bold ${extractedTrades.reduce((sum, t) => sum + t.profit, 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {extractedTrades.reduce((sum, t) => sum + t.profit, 0) >= 0 ? '+' : ''}${extractedTrades.reduce((sum, t) => sum + t.profit, 0).toFixed(2)}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Save to Account</Label>
-                      <Select value={selectedPropFirmId} onValueChange={setSelectedPropFirmId}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Select account..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No account (Nostro)</SelectItem>
-                          {propFirms.map(pf => <SelectItem key={pf.id} value={pf.id}>{pf.name} ({pf.account_type})</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Screenshot Timezone</Label>
-                      <Select value={screenshotTimezone} onValueChange={(v) => setScreenshotTimezone(v as TimezoneOption)}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Europe/London">London Time</SelectItem>
-                          <SelectItem value="America/New_York">New York Time</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="max-h-64 overflow-x-auto overflow-y-auto rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs w-8">#</TableHead>
-                          <TableHead className="text-xs">Date/Time</TableHead>
-                          <TableHead className="text-xs">Symbol</TableHead>
-                          <TableHead className="text-xs">Type</TableHead>
-                          <TableHead className="text-xs text-right">Lots</TableHead>
-                          <TableHead className="text-xs text-right">Open</TableHead>
-                          <TableHead className="text-xs text-right">Close</TableHead>
-                          <TableHead className="text-xs text-right">Pips</TableHead>
-                          <TableHead className="text-xs text-right">Profit</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {extractedTrades.map((trade, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="text-xs font-medium">{idx + 1}</TableCell>
-                            <TableCell className="text-xs font-mono whitespace-nowrap">{trade.open_time || trade.trade_date}</TableCell>
-                            <TableCell className="text-xs font-medium">{trade.pair}</TableCell>
-                            <TableCell><Badge variant={trade.trade_type === "Buy" ? "default" : "secondary"} className="text-[10px] px-1.5">{trade.trade_type}</Badge></TableCell>
-                            <TableCell className="text-xs text-right font-mono">{trade.volume?.toFixed(2) || '-'}</TableCell>
-                            <TableCell className="text-xs text-right font-mono">{trade.entry_price?.toFixed(trade.entry_price > 100 ? 2 : 5) || '-'}</TableCell>
-                            <TableCell className="text-xs text-right font-mono">{trade.close_price?.toFixed(trade.close_price > 100 ? 2 : 5) || '-'}</TableCell>
-                            <TableCell className={`text-xs text-right font-mono ${(trade.pips ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>{trade.pips !== undefined ? trade.pips.toFixed(1) : '-'}</TableCell>
-                            <TableCell className={`text-xs text-right font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>{trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}</TableCell>
-                          </TableRow>
+                {/* Account Selection */}
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="prop-firm-select" className="text-sm">Account:</Label>
+                  <Select value={selectedPropFirmId} onValueChange={setSelectedPropFirmId}>
+                    <SelectTrigger id="prop-firm-select" className="w-48">
+                      <SelectValue placeholder="Select account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Account</SelectItem>
+                      {propFirms
+                        .filter((firm) => firm.state !== 'passed')
+                        .map((firm) => (
+                          <SelectItem key={firm.id} value={firm.id}>
+                            {firm.name} ({firm.account_type})
+                          </SelectItem>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                  <div className="flex gap-2">
-                    <Button onClick={saveAllTrades} disabled={isSavingTrades} className="flex-1 gap-2">
-                      <Save className="h-4 w-4" />
-                      {isSavingTrades ? "Saving..." : `Save All ${extractedTrades.length} Trades`}
-                    </Button>
-                    <Button variant="outline" onClick={() => setExtractedTrades([])}><X className="h-4 w-4" /></Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                {/* Trades Table */}
+                <ScrollArea className="h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">#</TableHead>
+                        <TableHead className="text-xs">Time</TableHead>
+                        <TableHead className="text-xs">Pair</TableHead>
+                        <TableHead className="text-xs">Type</TableHead>
+                        <TableHead className="text-xs text-right">Volume</TableHead>
+                        <TableHead className="text-xs text-right">Entry</TableHead>
+                        <TableHead className="text-xs text-right">Exit</TableHead>
+                        <TableHead className="text-xs text-right">Pips</TableHead>
+                        <TableHead className="text-xs text-right">P/L</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {extractedTrades.map((trade, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="text-xs font-medium">{idx + 1}</TableCell>
+                          <TableCell className="text-xs font-mono whitespace-nowrap">{trade.open_time || trade.trade_date}</TableCell>
+                          <TableCell className="text-xs font-medium">{trade.pair}</TableCell>
+                          <TableCell><Badge variant={trade.trade_type === "Buy" ? "default" : "secondary"} className="text-[10px] px-1.5">{trade.trade_type}</Badge></TableCell>
+                          <TableCell className="text-xs text-right font-mono">{trade.volume?.toFixed(2) || '-'}</TableCell>
+                          <TableCell className="text-xs text-right font-mono">{trade.entry_price?.toFixed(trade.entry_price > 100 ? 2 : 5) || '-'}</TableCell>
+                          <TableCell className="text-xs text-right font-mono">{trade.close_price?.toFixed(trade.close_price > 100 ? 2 : 5) || '-'}</TableCell>
+                          <TableCell className={`text-xs text-right font-mono ${(trade.pips ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>{trade.pips !== undefined ? trade.pips.toFixed(1) : '-'}</TableCell>
+                          <TableCell className={`text-xs text-right font-medium ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>{trade.profit >= 0 ? '+' : ''}${trade.profit.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+
+                {/* Save Button */}
+                <div className="flex gap-2">
+                  <Button onClick={saveTradesToJournal} disabled={isSavingTrades} className="flex-1 gap-2">
+                    <Save className="h-4 w-4" />
+                    {isSavingTrades ? "Saving to Journal..." : `Save to Journal`}
+                  </Button>
+                  <Button variant="outline" onClick={() => setExtractedTrades([])}><X className="h-4 w-4" /></Button>
+                </div>
+              </div>
+            )}
 
           {(isExtracting || isAnalyzing) && (
             <div className="text-center py-4">
@@ -1163,44 +1046,79 @@ export default function AIChat() {
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                Paste Trade History from Prop Firm
+                Trade Data Input
               </Label>
-              <Button variant="ghost" size="sm" onClick={() => setTextPasteMode(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button 
+                  variant={showTradeParser ? "default" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowTradeParser(!showTradeParser)}
+                  className="text-xs"
+                >
+                  {showTradeParser ? "Simple" : "Advanced"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setTextPasteMode(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <textarea
-              value={pastedText}
-              onChange={e => setPastedText(e.target.value)}
-              placeholder="Paste your trade history here...&#10;Example:&#10;XAUUSD  TAKE_PROFIT  2026.04.23, 13:24:30&#10;0.02&#10;$4,729.72&#10;..."
-              className="w-full h-48 p-3 text-xs font-mono border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              disabled={isParsingText}
-            />
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleTextPasteExtraction} 
-                disabled={isParsingText || !pastedText.trim()}
-                className="flex-1 gap-2"
-              >
-                {isParsingText ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    Parsing...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4" />
-                    Extract Trades from Text
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={() => { setPastedText(""); setTextPasteMode(false); }}>
-                Cancel
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Works with copy-pasted trade history from MT4/MT5 or prop firm dashboards.
-            </p>
+            
+            {showTradeParser ? (
+              <TradeParser onTradesExtracted={(trades) => {
+                setExtractedTrades(trades);
+                const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
+                
+                toast({
+                  title: "Trades Parsed",
+                  description: `${trades.length} trades extracted. Total P&L: $${totalProfit.toFixed(2)}`,
+                });
+                
+                // Add assistant message for trade parser
+                setMessages(prev => [...prev, {
+                  role: "assistant",
+                  content: `📊 **Parsed ${trades.length} Trade${trades.length > 1 ? 's' : ''} from advanced parser!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the table below and click **Save to Journal** to store them in your journal database for Journal, Trade Management, and Analytics. 👇`,
+                  extractedTrades: trades
+                }]);
+                
+                setTextPasteMode(false);
+                setShowTradeParser(false);
+              }} />
+            ) : (
+              <>
+                <textarea
+                  value={pastedText}
+                  onChange={e => setPastedText(e.target.value)}
+                  placeholder="Paste your trade history here...&#10;Example:&#10;XAUUSD  TAKE_PROFIT  2026.04.23, 13:24:30&#10;0.02&#10;$4,729.72&#10;..."
+                  className="w-full h-48 p-3 text-xs font-mono border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  disabled={isParsingText}
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleTextPasteExtraction} 
+                    disabled={isParsingText || !pastedText.trim()}
+                    className="flex-1 gap-2"
+                  >
+                    {isParsingText ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        Parsing...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="h-4 w-4" />
+                        Extract Trades from Text
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={() => { setPastedText(""); setTextPasteMode(false); }}>
+                    Cancel
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Works with copy-pasted trade history from MT4/MT5 or prop firm dashboards.
+                </p>
+              </>
+            )}
           </div>
         )}
 
