@@ -35,7 +35,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import StrategyRulesPanel from "@/components/StrategyRulesPanel";
 import ReactMarkdown from "react-markdown";
 import { parseTradeTextWithAI, parseTradeHistoryText, ParsedTrade } from "@/lib/tradeTextParser";
-import TradeParser from "@/components/TradeParser";
 
 type Message = {
   role: "user" | "assistant";
@@ -123,7 +122,6 @@ export default function AIChat() {
   const [textPasteMode, setTextPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [isParsingText, setIsParsingText] = useState(false);
-  const [showTradeParser, setShowTradeParser] = useState(false);
   
   // Trade extraction states
   const [extractedTrades, setExtractedTrades] = useState<ExtractedTradeData[]>([]);
@@ -1049,76 +1047,43 @@ export default function AIChat() {
                 Trade Data Input
               </Label>
               <div className="flex gap-1">
-                <Button 
-                  variant={showTradeParser ? "default" : "outline"} 
-                  size="sm" 
-                  onClick={() => setShowTradeParser(!showTradeParser)}
-                  className="text-xs"
-                >
-                  {showTradeParser ? "Simple" : "Advanced"}
-                </Button>
                 <Button variant="ghost" size="sm" onClick={() => setTextPasteMode(false)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            
-            {showTradeParser ? (
-              <TradeParser onTradesExtracted={(trades) => {
-                setExtractedTrades(trades);
-                const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
-                
-                toast({
-                  title: "Trades Parsed",
-                  description: `${trades.length} trades extracted. Total P&L: $${totalProfit.toFixed(2)}`,
-                });
-                
-                // Add assistant message for trade parser
-                setMessages(prev => [...prev, {
-                  role: "assistant",
-                  content: `📊 **Parsed ${trades.length} Trade${trades.length > 1 ? 's' : ''} from advanced parser!**\n\n💰 Total P/L: ${totalProfit >= 0 ? '+' : ''}$${totalProfit.toFixed(2)}\n\nReview the table below and click **Save to Journal** to store them in your journal database for Journal, Trade Management, and Analytics. 👇`,
-                  extractedTrades: trades
-                }]);
-                
-                setTextPasteMode(false);
-                setShowTradeParser(false);
-              }} />
-            ) : (
-              <>
-                <textarea
-                  value={pastedText}
-                  onChange={e => setPastedText(e.target.value)}
-                  placeholder="Paste your trade history here...&#10;Example:&#10;XAUUSD  TAKE_PROFIT  2026.04.23, 13:24:30&#10;0.02&#10;$4,729.72&#10;..."
-                  className="w-full h-48 p-3 text-xs font-mono border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                  disabled={isParsingText}
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleTextPasteExtraction} 
-                    disabled={isParsingText || !pastedText.trim()}
-                    className="flex-1 gap-2"
-                  >
-                    {isParsingText ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                        Parsing...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="h-4 w-4" />
-                        Extract Trades from Text
-                      </>
-                    )}
-                  </Button>
-                  <Button variant="outline" onClick={() => { setPastedText(""); setTextPasteMode(false); }}>
-                    Cancel
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Works with copy-pasted trade history from MT4/MT5 or prop firm dashboards.
-                </p>
-              </>
-            )}
+            <textarea
+              value={pastedText}
+              onChange={e => setPastedText(e.target.value)}
+              placeholder="Paste your trade history here...&#10;Example:&#10;XAUUSD  TAKE_PROFIT  2026.04.23, 13:24:30&#10;0.02&#10;$4,729.72&#10;..."
+              className="w-full h-48 p-3 text-xs font-mono border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={isParsingText}
+            />
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleTextPasteExtraction} 
+                disabled={isParsingText || !pastedText.trim()}
+                className="flex-1 gap-2"
+              >
+                {isParsingText ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4" />
+                    Extract Trades from Text
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={() => { setPastedText(""); setTextPasteMode(false); }}>
+                Cancel
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Works with copy-pasted trade history from MT4/MT5 or prop firm dashboards.
+            </p>
           </div>
         )}
 

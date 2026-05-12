@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
@@ -15,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Edit, Plus, TrendingUp, TrendingDown, Target, DollarSign, Trash2, RefreshCw, Link2, Eye, EyeOff, Check, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { OpenPositions } from "@/components/propfirms/OpenPositions";
+import TradeParser, { type ParsedTradeImport } from "@/components/TradeParser";
 
 const ACCOUNT_TYPES = ['Personal', 'Funded', 'Evaluation 1', 'Evaluation 2', 'Evaluation 3'] as const;
 const ACCOUNT_STATUS = ['In Progress', 'Passed', 'Failed'] as const;
@@ -150,6 +152,8 @@ export default function PropFirmDetail() {
     notes: "",
     trade_date: new Date().toISOString().split("T")[0],
   });
+  const [addTradeMode, setAddTradeMode] = useState<"manual" | "parser">("manual");
+  const [parsedTradesToImport, setParsedTradesToImport] = useState<ParsedTradeImport[]>([]);
 
   useEffect(() => {
     fetchPropFirm();
@@ -329,6 +333,55 @@ export default function PropFirmDetail() {
       toast({
         title: "Error",
         description: "Failed to add trade",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportParsedTrades = async () => {
+    if (!id || parsedTradesToImport.length === 0) return;
+
+    setIsLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const tradesToInsert = parsedTradesToImport.map((trade) => ({
+        user_id: user.id,
+        prop_firm_id: id,
+        pair: trade.pair,
+        profit: trade.profit,
+        session: trade.session || null,
+        notes: trade.notes || "Imported from Trade Parser",
+        trade_date: trade.trade_date.replace(/\./g, "-"),
+        trade_type: trade.trade_type.toLowerCase(),
+        volume: trade.volume || null,
+        entry_price: trade.entry_price || null,
+        close_price: trade.close_price || null,
+        open_time: trade.open_time || null,
+        close_time: trade.close_time || null,
+      }));
+
+      const { error } = await supabase.from("trades").insert(tradesToInsert);
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${parsedTradesToImport.length} trade${parsedTradesToImport.length > 1 ? "s" : ""} imported successfully`,
+      });
+
+      setParsedTradesToImport([]);
+      setAddTradeMode("manual");
+      setIsAddTradeOpen(false);
+      fetchTrades();
+      fetchPropFirm();
+    } catch (_error) {
+      toast({
+        title: "Error",
+        description: "Failed to import parsed trades",
         variant: "destructive",
       });
     } finally {
@@ -1108,76 +1161,100 @@ export default function PropFirmDetail() {
       </Dialog>
 
       {/* Add Trade Dialog */}
-      <Dialog open={isAddTradeOpen} onOpenChange={setIsAddTradeOpen}>
+      <Dialog open={isAddTradeOpen} onOpenChange={(open) => {
+        setIsAddTradeOpen(open);
+        if (!open) {
+          setAddTradeMode("manual");
+          setParsedTradesToImport([]);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Trade</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAddTrade} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="pair">Currency Pair *</Label>
-              <Input
-                id="pair"
-                value={tradeData.pair}
-                onChange={(e) => setTradeData({ ...tradeData, pair: e.target.value })}
-                placeholder="e.g. EUR/USD"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profit">Profit/Loss ($) *</Label>
-              <Input
-                id="profit"
-                type="number"
-                step="0.01"
-                value={tradeData.profit}
-                onChange={(e) => setTradeData({ ...tradeData, profit: e.target.value })}
-                placeholder="e.g. 150.00 or -50.00"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="session">Session</Label>
-              <Input
-                id="session"
-                value={tradeData.session}
-                onChange={(e) => setTradeData({ ...tradeData, session: e.target.value })}
-                placeholder="e.g. London, NY, Asia"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="emotion">Emotion</Label>
-              <Input
-                id="emotion"
-                value={tradeData.emotion}
-                onChange={(e) => setTradeData({ ...tradeData, emotion: e.target.value })}
-                placeholder="e.g. Confident, Calm"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="trade_date">Date *</Label>
-              <Input
-                id="trade_date"
-                type="date"
-                value={tradeData.trade_date}
-                onChange={(e) => setTradeData({ ...tradeData, trade_date: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={tradeData.notes}
-                onChange={(e) => setTradeData({ ...tradeData, notes: e.target.value })}
-                placeholder="Trade details and observations..."
-                rows={3}
-              />
-            </div>
-            <Button type="submit" disabled={isLoading} className="w-full">
-              {isLoading ? "Adding..." : "Add Trade"}
-            </Button>
-          </form>
+          <Tabs value={addTradeMode} onValueChange={(value) => setAddTradeMode(value as "manual" | "parser")} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="manual">Manual</TabsTrigger>
+              <TabsTrigger value="parser">Trade Parser</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="manual">
+              <form onSubmit={handleAddTrade} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pair">Currency Pair *</Label>
+                  <Input
+                    id="pair"
+                    value={tradeData.pair}
+                    onChange={(e) => setTradeData({ ...tradeData, pair: e.target.value })}
+                    placeholder="e.g. EUR/USD"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profit">Profit/Loss ($) *</Label>
+                  <Input
+                    id="profit"
+                    type="number"
+                    step="0.01"
+                    value={tradeData.profit}
+                    onChange={(e) => setTradeData({ ...tradeData, profit: e.target.value })}
+                    placeholder="e.g. 150.00 or -50.00"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="session">Session</Label>
+                  <Input
+                    id="session"
+                    value={tradeData.session}
+                    onChange={(e) => setTradeData({ ...tradeData, session: e.target.value })}
+                    placeholder="e.g. London, NY, Asia"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emotion">Emotion</Label>
+                  <Input
+                    id="emotion"
+                    value={tradeData.emotion}
+                    onChange={(e) => setTradeData({ ...tradeData, emotion: e.target.value })}
+                    placeholder="e.g. Confident, Calm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="trade_date">Date *</Label>
+                  <Input
+                    id="trade_date"
+                    type="date"
+                    value={tradeData.trade_date}
+                    onChange={(e) => setTradeData({ ...tradeData, trade_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={tradeData.notes}
+                    onChange={(e) => setTradeData({ ...tradeData, notes: e.target.value })}
+                    placeholder="Trade details and observations..."
+                    rows={3}
+                  />
+                </div>
+                <Button type="submit" disabled={isLoading} className="w-full">
+                  {isLoading ? "Adding..." : "Add Trade"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="parser" className="space-y-4">
+              <TradeParser onTradesExtracted={setParsedTradesToImport} />
+              {parsedTradesToImport.length > 0 && (
+                <Button onClick={handleImportParsedTrades} disabled={isLoading} className="w-full">
+                  {isLoading ? "Importing..." : `Import ${parsedTradesToImport.length} Parsed Trade${parsedTradesToImport.length > 1 ? "s" : ""}`}
+                </Button>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
