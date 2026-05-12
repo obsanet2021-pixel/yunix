@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 // Trade extraction result interface
 export interface ExtractedTrade {
   symbol: string;
@@ -73,6 +71,60 @@ Return ONLY a valid JSON object in this exact format:
 
 No markdown formatting, no extra text, only the JSON object.`;
 
+const GEMINI_MODEL = "gemini-1.5-flash";
+
+function extractJsonObject(text: string): string {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in AI response");
+  }
+
+  return jsonMatch[0];
+}
+
+async function callGeminiApi(parts: Array<Record<string, unknown>>): Promise<string> {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("Gemini API key not configured");
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts,
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts
+    ?.map((part: { text?: string }) => part.text || "")
+    .join("");
+
+  if (!text) {
+    throw new Error("No content in Gemini response");
+  }
+
+  return text;
+}
+
 /**
  * Convert image file to base64
  */
@@ -97,31 +149,23 @@ async function callGemini(
   base64Image: string,
   mimeType: string
 ): Promise<ExtractionResult> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Gemini API key not configured");
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-  const imageData = {
-    inlineData: {
-      data: base64Image,
-      mimeType,
+  const response = await callGeminiApi([
+    { text: EXTRACTION_PROMPT },
+    {
+      inlineData: {
+        data: base64Image,
+        mimeType,
+      },
     },
-  };
-
-  const result = await model.generateContent([EXTRACTION_PROMPT, imageData]);
-  const response = result.response.text();
+  ]);
 
   // Parse the JSON response
-  const parsed = JSON.parse(response);
+  const parsed = JSON.parse(extractJsonObject(response));
   return {
     trades: parsed.trades || [],
     metadata: {
       provider: "gemini",
-      model: "gemini-1.5-flash",
+      model: GEMINI_MODEL,
       extractedAt: new Date().toISOString(),
     },
   };
@@ -400,30 +444,14 @@ Return ONLY valid JSON in this format:
  * Extract trade data from pasted text using AI
  */
 export async function extractTradeDataFromText(text: string): Promise<ExtractedTrade[]> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("Gemini API key not configured");
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
   try {
-    const result = await model.generateContent([
+    const response = await callGeminiApi([
       { text: TEXT_EXTRACTION_PROMPT },
-      { text: `Parse this trade history:\n\n${text}` }
+      { text: `Parse this trade history:\n\n${text}` },
     ]);
-
-    const response = result.response.text();
     
     // Extract JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("No valid JSON found in AI response");
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(extractJsonObject(response));
     
     if (!parsed.trades || !Array.isArray(parsed.trades)) {
       throw new Error("Invalid response format: trades array not found");

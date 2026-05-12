@@ -209,14 +209,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'CTO': '/app/admin/staff/cto',
       'CFO': '/app/admin/staff/cfo',
       'Course Manager': '/app/admin/staff/course-manager',
+      'Support': '/app/admin/staff/support',
       'Support Specialist': '/app/admin/staff/support',
+      'Support Agent': '/app/admin/staff/support',
+      'QA': '/app/admin/staff/qa',
       'QA Tester': '/app/admin/staff/qa',
       'Data Analyst': '/app/admin/staff/analytics',
+      'Data Analyts': '/app/admin/staff/analytics',
       'Plaque Order Manager': '/app/admin/staff/plaque-orders',
       'Order Manager': '/app/admin/staff/plaque-orders',
       'Social Media Manager': '/app/admin/staff/social-media',
       'Social Media': '/app/admin/staff/social-media',
       'Marketing': '/app/admin/staff/marketing',
+      'Marketing Agent': '/app/admin/staff/marketing',
+      'Backend Developer': '/app/admin/staff/cto',
+      'Frontend Developer': '/app/admin/staff/cto',
     };
 
     const role = dbRole?.name || user.user_metadata?.role || customSession?.user_role || 'user';

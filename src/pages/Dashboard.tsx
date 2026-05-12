@@ -14,6 +14,8 @@ import MotivationalBar from "@/components/MotivationalBar";
 import ForexTicker from "@/components/ForexTicker";
 import PropFirmFilter from "@/components/PropFirmFilter";
 import DailyCheckinModal from "@/components/DailyCheckinModal";
+import DisciplineScoreCard from "@/components/dashboard/DisciplineScoreCard";
+import { calculateDisciplineScore } from "@/lib/disciplineScore";
 
 interface PropFirm {
   id: string;
@@ -32,6 +34,17 @@ interface Trade {
   trade_date: string;
   prop_firm_id: string | null;
   net_profit?: number;
+  session?: string | null;
+  emotion?: string | null;
+  emotion_tag?: string | null;
+  rule_broken?: boolean | null;
+  mistake_tags?: string[] | null;
+  stop_loss?: number | null;
+}
+
+interface ChartPoint {
+  date: string;
+  profit: number;
 }
 
 // PNL color utility
@@ -42,7 +55,7 @@ const getPnLStyles = (profit: number) => {
 };
 
 // Helper functions for SVG chart
-function generateChartPath(data: { date: string; profit: number }[]): string {
+function generateChartPath(data: ChartPoint[]): string {
   if (data.length === 0) return "";
   
   const maxProfit = Math.max(...data.map(d => d.profit), 0);
@@ -56,7 +69,7 @@ function generateChartPath(data: { date: string; profit: number }[]): string {
   }).join(' ');
 }
 
-function getLastPointY(data: { date: string; profit: number }[]): number {
+function getLastPointY(data: ChartPoint[]): number {
   if (data.length === 0) return 50;
   
   const maxProfit = Math.max(...data.map(d => d.profit), 0);
@@ -140,7 +153,7 @@ export default function Dashboard() {
 
     const { data: tradesData } = await supabase
       .from("trades")
-      .select("id, user_id, prop_firm_id, profit, trade_date")
+      .select("id, user_id, prop_firm_id, profit, trade_date, session, emotion, emotion_tag, rule_broken, mistake_tags, stop_loss")
       .eq("user_id", user.id)
       .order("trade_date", { ascending: true });
 
@@ -193,7 +206,7 @@ export default function Dashboard() {
 
   const chartData = filteredTrades
     .filter(trade => new Date(trade.trade_date) >= subDays(new Date(), chartPeriod))
-    .reduce((acc: any[], trade) => {
+    .reduce<ChartPoint[]>((acc, trade) => {
       const date = format(new Date(trade.trade_date), "MMM d");
       const existing = acc.find(item => item.date === date);
       if (existing) { existing.profit += Number(trade.profit); }
@@ -202,7 +215,7 @@ export default function Dashboard() {
     }, []);
 
   const pnlStyles = getPnLStyles(totalProfit);
-  const PnLIcon = pnlStyles.icon;
+  const disciplineScore = calculateDisciplineScore(filteredTrades);
 
   const stats = [
     { title: "Total PnL", value: `$${totalProfit.toFixed(2)}`, change: hasFundedAccounts ? `Funded Balance: $${totalBalance.toFixed(2)}` : "No funded capital yet", trend: totalProfit >= 0 ? "up" : "down", icon: DollarSign, pnlColor: pnlStyles.color },
@@ -329,6 +342,8 @@ export default function Dashboard() {
               );
             })}
           </div>
+
+          <DisciplineScoreCard result={disciplineScore} />
         </div>
       </>
     );
@@ -385,6 +400,8 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      <DisciplineScoreCard result={disciplineScore} />
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3 w-full max-w-full overflow-hidden">
         <Card className="glow-card lg:col-span-2 w-full min-w-0">

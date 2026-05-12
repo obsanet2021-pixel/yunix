@@ -26,6 +26,11 @@ type GroqMessage = {
   content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
 };
 
+type OpenRouterMessage = {
+  role: "system" | "user" | "assistant";
+  content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
+};
+
 interface GroqFunctionDeclaration {
   name: string;
   description?: string;
@@ -58,6 +63,10 @@ function getGeminiApiKey(): string {
 
 function getGroqApiKey(): string | undefined {
   return Deno.env.get("GROQ_API_KEY");
+}
+
+function getOpenRouterApiKey(): string | undefined {
+  return Deno.env.get("OPENROUTER_API_KEY");
 }
 
 async function callGeminiWithTool(
@@ -155,6 +164,65 @@ async function callGroqWithTool(
   const data = await response.json();
   const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall) throw new Error("No tool call in Groq response");
+
+  return {
+    name: toolCall.function.name,
+    args: JSON.parse(toolCall.function.arguments),
+  };
+}
+
+// OpenRouter fallback using stable free vision models
+async function callOpenRouterWithTool(
+  messages: OpenRouterMessage[],
+  toolName: string,
+  toolDescription: string,
+  toolParameters: Record<string, unknown>,
+  opts?: {
+    generationConfig?: { temperature?: number; max_tokens?: number };
+    model?: string;
+  },
+): Promise<{ name: string; args: Record<string, unknown> }> {
+  const key = getOpenRouterApiKey();
+  if (!key) throw new Error("OPENROUTER_API_KEY not configured");
+
+  // Use stable free vision models - gemma-3-27b-it:free is often unavailable
+  const model = opts?.model ?? "google/gemini-flash-1.5-8b:free";
+
+  const body = {
+    model,
+    messages,
+    tools: [{
+      type: "function" as const,
+      function: {
+        name: toolName,
+        description: toolDescription,
+        parameters: toolParameters,
+      },
+    }],
+    tool_choice: { type: "function" as const, function: { name: toolName } },
+    temperature: opts?.generationConfig?.temperature ?? 0.1,
+    max_tokens: opts?.generationConfig?.max_tokens ?? 4096,
+  };
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`,
+      "HTTP-Referer": "https://yunix.app",
+      "X-Title": "Yunix Trade Journal",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenRouter API error: ${error}`);
+  }
+
+  const data = await response.json();
+  const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error("No tool call in OpenRouter response");
 
   return {
     name: toolCall.function.name,
@@ -272,12 +340,14 @@ CRITICAL RULES:
   // Check API keys
   const groqApiKey = getGroqApiKey();
   const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+  const openRouterApiKey = getOpenRouterApiKey();
   console.log("🔑 Groq API Key available:", !!groqApiKey);
   console.log("🔑 Gemini API Key available:", !!geminiApiKey);
+  console.log("🔑 OpenRouter API Key available:", !!openRouterApiKey);
   
   // Validate at least one API key is configured
-  if (!groqApiKey && !geminiApiKey) {
-    console.error("❌ No API keys configured! Set GROQ_API_KEY or GEMINI_API_KEY in Supabase secrets.");
+  if (!groqApiKey && !geminiApiKey && !openRouterApiKey) {
+    console.error("❌ No API keys configured! Set GROQ_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY in Supabase secrets.");
     return new Response(JSON.stringify({ 
       error: "AI service not configured. Please contact support.",
       details: "No API keys found",
@@ -332,46 +402,105 @@ CRITICAL RULES:
   }
 
   // Fallback to Gemini (only if API key is available)
-  if (!geminiApiKey) {
-    throw new Error("Groq failed and Gemini API key not configured");
+  if (geminiApiKey) {
+    console.log("🔄 Using Gemini API for trade extraction");
+    try {
+      const contents: GeminiContent[] = [{
+        role: "user",
+        parts: [
+          { text: "Extract all trades from this trading history screenshot." },
+          { inlineData: { mimeType: "image/png", data: imageBase64 } },
+        ],
+      }];
+
+      const { args: result } = await callGeminiWithTool(contents, [extractMultipleTradesTool], {
+        systemInstruction,
+        forcedFunctionName: "extract_multiple_trades",
+        generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+      });
+
+      const trades = (result.trades || []) as Trade[];
+      console.log(`✅ Gemini extracted ${trades.length} trades`);
+
+      return new Response(JSON.stringify({
+        success: true,
+        trade: trades.length > 0 ? trades[0] : null,
+        trades,
+        source: "gemini"
+      }), {
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+      });
+    } catch (geminiError) {
+      console.error("⚠️ Gemini extraction failed:", geminiError);
+    }
   }
   
-  console.log("🔄 Using Gemini API for trade extraction");
-  const contents: GeminiContent[] = [{
-    role: "user",
-    parts: [
-      { text: "Extract all trades from this trading history screenshot." },
-      { inlineData: { mimeType: "image/png", data: imageBase64 } },
-    ],
-  }];
+  // Final fallback to OpenRouter (using gemma-3-27b-it:free)
+  if (!openRouterApiKey) {
+    throw new Error("All AI services failed and no API keys configured");
+  }
+  
+  console.log("🔄 Using OpenRouter API (gemma-3-27b-it) for trade extraction");
+  const imageData = imageBase64.startsWith("data:") ? imageBase64 : `data:image/png;base64,${imageBase64}`;
+  
+  const openRouterMessages: OpenRouterMessage[] = [
+    {
+      role: "system",
+      content: systemInstruction,
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Extract all trades from this trading history screenshot." },
+        { type: "image_url", image_url: { url: imageData } }
+      ]
+    }
+  ];
 
-  const { args: result } = await callGeminiWithTool(contents, [extractMultipleTradesTool], {
-    systemInstruction,
-    forcedFunctionName: "extract_multiple_trades",
-    generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
-  });
+  const { args: result } = await callOpenRouterWithTool(
+    openRouterMessages,
+    "extract_multiple_trades",
+    "Extract ALL trades from a trading history screenshot table with full details",
+    extractMultipleTradesTool.parameters || {},
+    {
+      generationConfig: { temperature: 0.1, max_tokens: 4096 },
+      model: "google/gemini-flash-1.5-8b:free",
+    }
+  );
 
   const trades = (result.trades || []) as Trade[];
-  console.log(`✅ Gemini extracted ${trades.length} trades`);
+  console.log(`✅ OpenRouter extracted ${trades.length} trades`);
 
   return new Response(JSON.stringify({
     success: true,
     trade: trades.length > 0 ? trades[0] : null,
     trades,
-    source: "gemini"
+    source: "openrouter"
   }), {
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
   });
 } catch (error) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorStack = error instanceof Error ? error.stack : undefined;
+  
+  // Log full error details internally for debugging
   console.error("❌ Trade extraction failed:", errorMessage);
   console.error("Stack trace:", errorStack);
   
+  // Sanitize error message for user - don't expose internal API details
+  let userMessage = "Unable to analyze screenshot right now. Please try again in a moment or enter the trade manually.";
+  
+  // Only show specific message for known user-fixable issues
+  if (errorMessage.includes("Image Too Large") || errorMessage.includes("5MB")) {
+    userMessage = "Image is too large. Please upload an image smaller than 5MB.";
+  } else if (errorMessage.includes("No image provided")) {
+    userMessage = "No image was provided. Please upload a screenshot.";
+  }
+  
   return new Response(JSON.stringify({ 
-    error: `Extraction failed: ${errorMessage}`,
-    success: false,
-    details: errorMessage
+    error: userMessage,
+    success: false
+    // Intentionally NOT including: details, user_id, internal API errors, model names
   }), {
     status: 500,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" }

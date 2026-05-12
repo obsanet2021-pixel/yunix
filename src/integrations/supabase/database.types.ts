@@ -917,16 +917,24 @@ export type Database = {
       }
       trades: {
         Row: {
+          ai_extraction_metadata: Json | null
           close_price: number | null
+          close_time: string | null
           commission: number | null
           created_at: string | null
           cycle_id: string | null
           emotion: string | null
           emotion_tag: string | null
           entry_price: number | null
+          extracted_from_screenshot: boolean | null
+          fee_swap: number | null
           id: string
+          is_synced: boolean | null
           mistake_tags: string[] | null
+          mt5_ticket: string | null
+          net_profit: number | null
           notes: string | null
+          open_time: string | null
           pair: string
           profit: number
           prop_firm_id: string | null
@@ -946,16 +954,24 @@ export type Database = {
           volume: number | null
         }
         Insert: {
+          ai_extraction_metadata?: Json | null
           close_price?: number | null
+          close_time?: string | null
           commission?: number | null
           created_at?: string | null
           cycle_id?: string | null
           emotion?: string | null
           emotion_tag?: string | null
           entry_price?: number | null
+          extracted_from_screenshot?: boolean | null
+          fee_swap?: number | null
           id?: string
+          is_synced?: boolean | null
           mistake_tags?: string[] | null
+          mt5_ticket?: string | null
+          net_profit?: number | null
           notes?: string | null
+          open_time?: string | null
           pair: string
           profit: number
           prop_firm_id?: string | null
@@ -975,16 +991,24 @@ export type Database = {
           volume?: number | null
         }
         Update: {
+          ai_extraction_metadata?: Json | null
           close_price?: number | null
+          close_time?: string | null
           commission?: number | null
           created_at?: string | null
           cycle_id?: string | null
           emotion?: string | null
           emotion_tag?: string | null
           entry_price?: number | null
+          extracted_from_screenshot?: boolean | null
+          fee_swap?: number | null
           id?: string
+          is_synced?: boolean | null
           mistake_tags?: string[] | null
+          mt5_ticket?: string | null
+          net_profit?: number | null
           notes?: string | null
+          open_time?: string | null
           pair?: string
           profit?: number
           prop_firm_id?: string | null

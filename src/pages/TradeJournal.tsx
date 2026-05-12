@@ -16,6 +16,7 @@ import { CycleFilter } from "@/components/propfirms/CycleFilter";
 import { useAllCyclesForUser } from "@/hooks/useAccountCycles";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EMOTION_TAGS, MISTAKE_TAGS, getEmotionTagStyle, getMistakeTagLabel } from "@/lib/tradeCalculations";
+import { AIExtractButton } from "@/components/trade/AIExtractButton";
 import * as XLSX from 'xlsx';
 
 interface PropFirm {
@@ -493,7 +494,7 @@ export default function TradeJournal() {
         swap: trade.swap,
       }));
 
-      const { error } = await supabase.from("trades").insert(tradesToInsert);
+      const { error } = await supabase.from("trades").insert(tradesToInsert as any);
       
       if (error) throw error;
 
@@ -567,7 +568,7 @@ export default function TradeJournal() {
               .select("id")
               .eq("prop_firm_id", propFirmId)
               .eq("status", "active")
-              .single();
+              .single() as any;
             
             if (activeCycleData) {
               cycleId = activeCycleData.id;
@@ -599,7 +600,7 @@ export default function TradeJournal() {
         emotion_tag: formData.emotion_tag || null,
         rule_broken: formData.rule_broken,
         mistake_tags: formData.mistake_tags.length > 0 ? formData.mistake_tags : null,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -609,20 +610,20 @@ export default function TradeJournal() {
           .from("prop_firms")
           .select("current_profit, balance")
           .eq("id", formData.prop_firm_id)
-          .single();
+          .single() as any;
 
         if (propFirm) {
           const tradeProfit = parseFloat(formData.profit);
           const newProfit = (propFirm.current_profit || 0) + tradeProfit;
           const newEquity = (propFirm.balance || 0) + newProfit;
           
-          await supabase
+          await (supabase
             .from("prop_firms")
             .update({ 
               current_profit: newProfit,
               equity: newEquity
             })
-            .eq("id", formData.prop_firm_id);
+            .eq("id", formData.prop_firm_id) as any);
         }
       }
 
@@ -720,7 +721,7 @@ export default function TradeJournal() {
         updatedScreenshots = [...(tradeToEdit.screenshots || []), publicUrl];
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase
         .from("trades")
         .update({
           pair: formData.pair,
@@ -740,7 +741,7 @@ export default function TradeJournal() {
           stop_loss: formData.stop_loss ? parseFloat(formData.stop_loss) : null,
           close_price: formData.close_price ? parseFloat(formData.close_price) : null,
         })
-        .eq("id", tradeToEdit.id);
+        .eq("id", tradeToEdit.id) as any);
 
       if (error) throw error;
 
@@ -806,19 +807,19 @@ export default function TradeJournal() {
           .from("prop_firms")
           .select("current_profit, balance")
           .eq("id", tradeToDelete.prop_firm_id)
-          .single();
+          .single() as any;
 
         if (propFirm) {
           const newProfit = (propFirm.current_profit || 0) - Number(tradeToDelete.profit);
           const newEquity = (propFirm.balance || 0) + newProfit;
           
-          await supabase
+          await (supabase
             .from("prop_firms")
             .update({ 
               current_profit: newProfit,
               equity: newEquity
             })
-            .eq("id", tradeToDelete.prop_firm_id);
+            .eq("id", tradeToDelete.prop_firm_id) as any);
         }
       }
 
@@ -1541,6 +1542,18 @@ export default function TradeJournal() {
                   Clear Filters
                 </Button>
               )}
+              <AIExtractButton
+                userId={userId || ""}
+                propFirmId={formData.prop_firm_id || null}
+                cycleId={formData.cycle_id || null}
+                onTradesExtracted={(newTrades) => {
+                  setTrades((prev) => [...newTrades, ...prev]);
+                  toast({
+                    title: "Trades Added",
+                    description: `${newTrades.length} trade${newTrades.length > 1 ? "s" : ""} extracted and saved successfully`,
+                  });
+                }}
+              />
               <Button onClick={() => setOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Add Trade

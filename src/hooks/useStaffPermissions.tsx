@@ -115,6 +115,7 @@ export function useStaffPermissions() {
   const [role, setRole] = useState<UserRole>(null);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>(null);
   const [staffRoleName, setStaffRoleName] = useState<string | null>(null);
+  const [staffData, setStaffData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -122,6 +123,7 @@ export function useStaffPermissions() {
       setRole(null);
       setAccessLevel(null);
       setStaffRoleName(null);
+      setStaffData(null);
       setLoading(false);
       return;
     }
@@ -154,18 +156,20 @@ export function useStaffPermissions() {
 
       if (isStaff) {
         setRole('staff');
-        // Fetch staff role name from staff table
-        const { data: staffData } = await supabase
+        // Fetch staff role name from staff table (join with admin_roles to get name)
+        const { data: staffRecord } = await supabase
           .from('staff')
-          .select('role')
+          .select(`role:admin_roles(name)`)
           .eq('user_id', user.id)
           .single();
 
-        if (staffData) {
-          const roleData = staffData as { role: string };
-          if (roleData.role) {
-            setStaffRoleName(roleData.role);
-            setAccessLevel(ROLE_TO_ACCESS_LEVEL[roleData.role] || 'tier2');
+        if (staffRecord) {
+          setStaffData(staffRecord);
+          const staffInfo = staffRecord as any;
+          const roleName = staffInfo.role?.name || staffInfo.role;
+          if (roleName) {
+            setStaffRoleName(roleName);
+            setAccessLevel(ROLE_TO_ACCESS_LEVEL[roleName] || 'tier2');
           } else {
             setAccessLevel('tier2');
           }
@@ -228,6 +232,7 @@ export function useStaffPermissions() {
     isCEO,
     accessLevel,
     staffRoleName,
+    staffData,
     hasAccessToSection,
     hasReadOnlyAccess: checkReadOnlyAccess,
     hasWriteAccess: checkWriteAccess,
