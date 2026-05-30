@@ -483,6 +483,15 @@ export default function Analytics() {
           <p className="text-sm text-muted-foreground">Performance analysis and insights</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={isRealtime ? "default" : "outline"}
+            size="sm"
+            className="h-9 gap-1.5 text-xs"
+            onClick={() => setIsRealtime(!isRealtime)}
+          >
+            <Radio className={`h-3 w-3 ${isRealtime ? "animate-pulse" : ""}`} />
+            {isRealtime ? "Live" : "Paused"}
+          </Button>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-full sm:w-[140px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
