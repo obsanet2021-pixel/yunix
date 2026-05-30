@@ -17,6 +17,7 @@ import { ArrowLeft, Edit, Plus, TrendingUp, TrendingDown, Target, DollarSign, Tr
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { OpenPositions } from "@/components/propfirms/OpenPositions";
 import TradeParser, { type ParsedTradeImport } from "@/components/TradeParser";
+import TradeForm from "@/components/TradeForm";
 
 /** Values safe for Postgres timestamptz; rejects prices like "$4,729.72". */
 function normalizeDbTimestamp(value: string | null | undefined): string | null {
@@ -1209,69 +1210,13 @@ export default function PropFirmDetail() {
 
             <TabsContent value="manual">
               <form onSubmit={handleAddTrade} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pair">Currency Pair *</Label>
-                  <Input
-                    id="pair"
-                    value={tradeData.pair}
-                    onChange={(e) => setTradeData({ ...tradeData, pair: e.target.value })}
-                    placeholder="e.g. EUR/USD"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profit">Profit/Loss ($) *</Label>
-                  <Input
-                    id="profit"
-                    type="number"
-                    step="0.01"
-                    value={tradeData.profit}
-                    onChange={(e) => setTradeData({ ...tradeData, profit: e.target.value })}
-                    placeholder="e.g. 150.00 or -50.00"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="session">Session</Label>
-                  <Input
-                    id="session"
-                    value={tradeData.session}
-                    onChange={(e) => setTradeData({ ...tradeData, session: e.target.value })}
-                    placeholder="e.g. London, NY, Asia"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emotion">Emotion</Label>
-                  <Input
-                    id="emotion"
-                    value={tradeData.emotion}
-                    onChange={(e) => setTradeData({ ...tradeData, emotion: e.target.value })}
-                    placeholder="e.g. Confident, Calm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="trade_date">Date *</Label>
-                  <Input
-                    id="trade_date"
-                    type="date"
-                    value={tradeData.trade_date}
-                    onChange={(e) => setTradeData({ ...tradeData, trade_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={tradeData.notes}
-                    onChange={(e) => setTradeData({ ...tradeData, notes: e.target.value })}
-                    placeholder="Trade details and observations..."
-                    rows={3}
-                  />
-                </div>
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? "Adding..." : "Add Trade"}
-                </Button>
+                {/* Use shared TradeForm for manual entry */}
+                <TradeForm
+                  formData={tradeData}
+                  setFormData={setTradeData}
+                  onSubmitLabel={isLoading ? "Adding..." : "Add Trade"}
+                  onSubmitDisabled={isLoading}
+                />
               </form>
             </TabsContent>
 

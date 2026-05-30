@@ -371,7 +371,7 @@ export default function TradeManagement() {
         </CardHeader>
         <CardContent className="px-3 sm:px-4 pb-3">
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -390,7 +390,20 @@ export default function TradeManagement() {
                 onAccountChange={setFilterAccount}
               />
 
-              <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
+              {/* Outcome filter (wins / losses) */}
+              <div className="min-w-0">
+                <select
+                  value={filterOutcome}
+                  onChange={(e) => setFilterOutcome(e.target.value)}
+                  className="w-full h-9 rounded border bg-input px-2 text-sm"
+                >
+                  <option value="all">All Outcomes</option>
+                  <option value="wins">Wins</option>
+                  <option value="losses">Losses</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 sm:col-span-2 lg:col-span-1 items-center">
                 <div className="flex items-center gap-1 flex-1 min-w-0">
                   <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
                   <Input
@@ -408,6 +421,11 @@ export default function TradeManagement() {
                     onChange={(e) => setDateTo(e.target.value)}
                     className="h-9 text-xs min-w-0"
                   />
+                </div>
+                <div className="ml-2">
+                  <Button size="sm" variant={isRealtime ? "primary" : "outline"} onClick={() => setIsRealtime(!isRealtime)}>
+                    {isRealtime ? 'Realtime On' : 'Realtime Off'}
+                  </Button>
                 </div>
               </div>
             </div>

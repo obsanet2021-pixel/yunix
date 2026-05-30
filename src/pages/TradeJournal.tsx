@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EMOTION_TAGS, MISTAKE_TAGS, getEmotionTagStyle, getMistakeTagLabel } from "@/lib/tradeCalculations";
 import { AIExtractButton } from "@/components/trade/AIExtractButton";
 import * as XLSX from 'xlsx';
+import TradeForm from "@/components/TradeForm";
 
 interface PropFirm {
   id: string;
@@ -896,340 +897,15 @@ export default function TradeJournal() {
               <DialogTitle>Add New Trade</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Prop Firm (Optional)</Label>
-                <Select
-                  value={selectedPropFirmName}
-                  onValueChange={(value) => {
-                    setSelectedPropFirmName(value);
-                    setFormData({ ...formData, prop_firm_id: "" });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select prop firm profile" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    <SelectItem value="none">None</SelectItem>
-                    {(() => {
-                      // Case-insensitive unique prop firm names
-                      const normalizeCase = (name: string) => name.trim().toLowerCase();
-                      const uniqueNamesMap = new Map<string, string>();
-                      propFirms.forEach(f => {
-                        const key = normalizeCase(f.name);
-                        if (!uniqueNamesMap.has(key)) {
-                          uniqueNamesMap.set(key, f.name);
-                        }
-                      });
-                      return Array.from(uniqueNamesMap.values()).map((name) => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
-                      ));
-                    })()}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedPropFirmName && selectedPropFirmName !== "none" && (
-                <div className="space-y-2">
-                  <Label>Select Account</Label>
-                  <Select
-                    value={formData.prop_firm_id}
-                    onValueChange={(value) => setFormData({ ...formData, prop_firm_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50">
-                      {(() => {
-                        const normalizeCase = (name: string) => name.trim().toLowerCase();
-                        return propFirms.filter(f => normalizeCase(f.name) === normalizeCase(selectedPropFirmName)).map((firm) => (
-                          <SelectItem key={firm.id} value={firm.id}>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${
-                                firm.account_type === 'Funded' ? 'bg-green-500/20 text-green-400' :
-                                firm.account_type === 'Evaluation 1' ? 'bg-blue-500/20 text-blue-400' :
-                                firm.account_type === 'Evaluation 2' ? 'bg-purple-500/20 text-purple-400' :
-                                'bg-slate-500/20 text-slate-400'
-                              }`}>{firm.account_type || 'Personal'}</span>
-                              <span className="text-xs text-muted-foreground">${(firm.balance || 0).toLocaleString()}</span>
-                            </div>
-                          </SelectItem>
-                        ));
-                      })()}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {/* Cycle selector for funded accounts */}
-              {(() => {
-                const selectedFirm = propFirms.find(f => f.id === formData.prop_firm_id);
-                if (selectedFirm?.account_type === 'Funded') {
-                  const firmCycles = getCyclesForFirm(formData.prop_firm_id);
-                  const activeCycle = getActiveCycleForFirm(formData.prop_firm_id);
-                  return (
-                    <div className="space-y-2">
-                      <Label>Cycle (for backlogging trades)</Label>
-                      <Select
-                        value={formData.cycle_id || "active"}
-                        onValueChange={(value) => setFormData({ ...formData, cycle_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Active Cycle (Auto)" />
-                        </SelectTrigger>
-                        <SelectContent className="z-50">
-                          <SelectItem value="active">
-                            Active Cycle {activeCycle ? `#${activeCycle.cycle_number}` : ''} (Auto)
-                          </SelectItem>
-                          {firmCycles.filter(c => c.status !== 'active').map((cycle) => (
-                            <SelectItem key={cycle.id} value={cycle.id}>
-                              Cycle #{cycle.cycle_number} ({cycle.status})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Select a specific cycle to backlog trades, or leave on Active to auto-assign
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              <div className="space-y-2">
-                <Label htmlFor="pair">Currency Pair *</Label>
-                <Input
-                  id="pair"
-                  value={formData.pair}
-                  onChange={(e) => setFormData({ ...formData, pair: e.target.value })}
-                  placeholder="e.g. EUR/USD, XAUUSD"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="trade_type">Type</Label>
-                  <Select
-                    value={formData.trade_type}
-                    onValueChange={(value) => setFormData({ ...formData, trade_type: value })}
-                  >
-                    <SelectTrigger id="trade_type">
-                      <SelectValue placeholder="Buy/Sell" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Buy">Buy</SelectItem>
-                      <SelectItem value="Sell">Sell</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="volume">Volume (Lots)</Label>
-                  <Input
-                    id="volume"
-                    type="number"
-                    step="0.01"
-                    value={formData.volume}
-                    onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
-                    placeholder="e.g. 0.5"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="entry_price">Entry Price</Label>
-                  <Input
-                    id="entry_price"
-                    type="number"
-                    step="0.00001"
-                    value={formData.entry_price}
-                    onChange={(e) => setFormData({ ...formData, entry_price: e.target.value })}
-                    placeholder="e.g. 1925.50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="close_price">Close Price</Label>
-                  <Input
-                    id="close_price"
-                    type="number"
-                    step="0.00001"
-                    value={formData.close_price}
-                    onChange={(e) => setFormData({ ...formData, close_price: e.target.value })}
-                    placeholder="e.g. 1930.50"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="take_profit">Take Profit</Label>
-                  <Input
-                    id="take_profit"
-                    type="number"
-                    step="0.00001"
-                    value={formData.take_profit}
-                    onChange={(e) => setFormData({ ...formData, take_profit: e.target.value })}
-                    placeholder="TP price"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stop_loss">Stop Loss</Label>
-                  <Input
-                    id="stop_loss"
-                    type="number"
-                    step="0.00001"
-                    value={formData.stop_loss}
-                    onChange={(e) => setFormData({ ...formData, stop_loss: e.target.value })}
-                    placeholder="SL price"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="profit">Profit/Loss ($) *</Label>
-                <Input
-                  id="profit"
-                  type="number"
-                  step="0.01"
-                  value={formData.profit}
-                  onChange={(e) => setFormData({ ...formData, profit: e.target.value })}
-                  placeholder="e.g. 150.00 or -50.00"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="session">Session</Label>
-                  <Input
-                    id="session"
-                    value={formData.session}
-                    onChange={(e) => setFormData({ ...formData, session: e.target.value })}
-                    placeholder="e.g. NY, London"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Emotion Tag</Label>
-                  <Select
-                    value={formData.emotion_tag}
-                    onValueChange={(value) => setFormData({ ...formData, emotion_tag: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="How did you feel?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EMOTION_TAGS.map((emotion) => (
-                        <SelectItem key={emotion.value} value={emotion.value}>
-                          <span className={`px-2 py-0.5 rounded text-xs ${emotion.color}`}>
-                            {emotion.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {/* Rule Broken Checkbox */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="rule_broken"
-                  checked={formData.rule_broken}
-                  onCheckedChange={(checked) => setFormData({ ...formData, rule_broken: checked === true })}
-                />
-                <Label htmlFor="rule_broken" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  I broke my trading rules
-                </Label>
-              </div>
-
-              {/* Mistake Tags */}
-              {formData.rule_broken && (
-                <div className="space-y-2 p-3 rounded-lg border border-destructive/20 bg-destructive/5">
-                  <Label className="text-sm">What mistakes did you make?</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {MISTAKE_TAGS.map((mistake) => (
-                      <div key={mistake.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`mistake-${mistake.value}`}
-                          checked={formData.mistake_tags.includes(mistake.value)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFormData({ ...formData, mistake_tags: [...formData.mistake_tags, mistake.value] });
-                            } else {
-                              setFormData({ ...formData, mistake_tags: formData.mistake_tags.filter(t => t !== mistake.value) });
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`mistake-${mistake.value}`} className="text-xs cursor-pointer">
-                          {mistake.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="trade_date">Date *</Label>
-                <Input
-                  id="trade_date"
-                  type="date"
-                  value={formData.trade_date}
-                  onChange={(e) => setFormData({ ...formData, trade_date: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Trade details and observations..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="screenshot">Screenshot (Optional)</Label>
-                <Input
-                  id="screenshot"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
-                />
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground self-center">or upload:</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => document.getElementById('html_upload')?.click()}
-                  >
-                    <Upload className="h-3 w-3 mr-1" />
-                    HTML
-                  </Button>
-                  <input
-                    id="html_upload"
-                    type="file"
-                    accept=".html,.htm"
-                    className="hidden"
-                    onChange={(e) => handleHtmlUpload(e.target.files?.[0])}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => document.getElementById('excel_upload')?.click()}
-                  >
-                    <Upload className="h-3 w-3 mr-1" />
-                    XLSX/Excel
-                  </Button>
-                  <input
-                    id="excel_upload"
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    className="hidden"
-                    onChange={(e) => handleExcelUpload(e.target.files?.[0])}
-                  />
-                </div>
-              </div>
-              <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary/90">
-                {isLoading ? "Saving..." : "Save Trade"}
-              </Button>
+              <TradeForm
+                formData={formData}
+                setFormData={setFormData}
+                propFirms={propFirms}
+                getCyclesForFirm={getCyclesForFirm}
+                getActiveCycleForFirm={getActiveCycleForFirm}
+                onSubmitLabel={isLoading ? "Saving..." : "Save Trade"}
+                onSubmitDisabled={isLoading}
+              />
             </form>
           </DialogContent>
         </Dialog>
@@ -1455,26 +1131,34 @@ export default function TradeJournal() {
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="edit_session">Session</Label>
-                <Input
-                  id="edit_session"
-                  value={formData.session}
-                  onChange={(e) => setFormData({ ...formData, session: e.target.value })}
-                  placeholder="e.g. NY, London"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Session</Label>
+                  <Select value={formData.session || ""} onValueChange={(v) => setFormData({ ...formData, session: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select session" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="London">London</SelectItem>
+                      <SelectItem value="New York">New York</SelectItem>
+                      <SelectItem value="Asia">Asia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Emotion</Label>
+                  <Select value={formData.emotion_tag || ""} onValueChange={(v) => setFormData({ ...formData, emotion_tag: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="How did you feel?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EMOTION_TAGS.map(e => (
+                        <SelectItem key={e.value} value={e.value}><span className={`px-2 py-0.5 rounded text-xs ${e.color}`}>{e.label}</span></SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit_emotion">Emotion</Label>
-                <Input
-                  id="edit_emotion"
-                  value={formData.emotion}
-                  onChange={(e) => setFormData({ ...formData, emotion: e.target.value })}
-                  placeholder="e.g. Calm"
-                />
-              </div>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="edit_trade_date">Date *</Label>
               <Input
