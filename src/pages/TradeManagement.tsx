@@ -332,7 +332,7 @@ export default function TradeManagement() {
           </CardContent>
         </Card>
 
-        <Card className="glow-card">
+        <Card className={`glow-card border ${totalProfit > 0 ? "border-green-500/40" : totalProfit < 0 ? "border-red-500/40" : "border-border"}`}>
           <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-4">
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total P&L</CardTitle>
           </CardHeader>
@@ -403,9 +403,9 @@ export default function TradeManagement() {
                 </select>
               </div>
 
-              <div className="flex gap-2 sm:col-span-2 lg:col-span-1 items-center">
-                <div className="flex items-center gap-1 flex-1 min-w-0">
-                  <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+              <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 items-center">
+                <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
+                  <span className="text-xs text-muted-foreground shrink-0">From</span>
                   <Input
                     type="date"
                     value={dateFrom}
@@ -413,8 +413,8 @@ export default function TradeManagement() {
                     className="h-9 text-xs min-w-0"
                   />
                 </div>
-                <div className="flex items-center gap-1 flex-1 min-w-0">
-                  <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
+                  <span className="text-xs text-muted-foreground shrink-0">To</span>
                   <Input
                     type="date"
                     value={dateTo}
@@ -422,11 +422,15 @@ export default function TradeManagement() {
                     className="h-9 text-xs min-w-0"
                   />
                 </div>
-                <div className="ml-2">
-                  <Button size="sm" variant={isRealtime ? "primary" : "outline"} onClick={() => setIsRealtime(!isRealtime)}>
-                    {isRealtime ? 'Realtime On' : 'Realtime Off'}
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant={isRealtime ? "default" : "outline"}
+                  className="h-9 gap-1.5 shrink-0"
+                  onClick={() => setIsRealtime(!isRealtime)}
+                >
+                  <Radio className={`h-3 w-3 ${isRealtime ? "animate-pulse" : ""}`} />
+                  {isRealtime ? "Live" : "Paused"}
+                </Button>
               </div>
             </div>
           </div>
@@ -439,13 +443,13 @@ export default function TradeManagement() {
           <CardTitle className="text-sm sm:text-base">Trades ({filteredTrades.length})</CardTitle>
         </CardHeader>
         <CardContent className="px-2 sm:px-4 pb-3">
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto -mx-2 px-2">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs sticky left-0 bg-card z-10">Date</TableHead>
                   <TableHead className="text-xs">Time</TableHead>
-                  <TableHead className="text-xs">Pair</TableHead>
+                  <TableHead className="text-xs sticky left-[80px] bg-card z-10">Pair</TableHead>
                   <TableHead className="text-xs hidden sm:table-cell">Type</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Vol</TableHead>
                   <TableHead className="text-xs hidden lg:table-cell">Entry</TableHead>
@@ -472,9 +476,9 @@ export default function TradeManagement() {
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => navigate(`/app/journal/${trade.id}`)}
                     >
-                      <TableCell className="font-mono text-xs">{trade.trade_date}</TableCell>
+                      <TableCell className="font-mono text-xs sticky left-0 bg-card z-10">{trade.trade_date}</TableCell>
                       <TableCell className="font-mono text-xs">{formatOpenTime(trade.open_time)}</TableCell>
-                      <TableCell className="font-medium text-xs">{trade.pair}</TableCell>
+                      <TableCell className="font-medium text-xs sticky left-[80px] bg-card z-10">{trade.pair}</TableCell>
                       <TableCell className="text-xs hidden sm:table-cell">
                         {trade.trade_type ? (
                           <Badge variant="outline" className={trade.trade_type === 'Buy' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
