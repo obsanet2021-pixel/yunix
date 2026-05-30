@@ -344,10 +344,21 @@ export default function AIChat() {
 
   // ============ CONVERSATIONS ============
   const loadConversations = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("chat_conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
-    if (data) setConversations(data);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("chat_conversations")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      setConversations(data ?? []);
+    } catch (err) {
+      console.error("[AIChat] loadConversations failed:", err);
+      // Silently degrade — history panel will show empty state
+      setConversations([]);
+    }
   };
 
   const loadConversation = async (conversationId: string) => {
@@ -939,7 +950,7 @@ export default function AIChat() {
 
             {/* Extracted Trades Display */}
             {extractedTrades.length > 0 && (
-              <div className="bg-card border rounded-lg p-4 space-y-3">
+              <div className="bg-card border rounded-lg p-4 space-y-3 max-h-[480px] overflow-y-auto">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold flex items-center gap-2">
                     📊 Extracted {extractedTrades.length} Trade{extractedTrades.length > 1 ? 's' : ''}
@@ -1040,7 +1051,7 @@ export default function AIChat() {
 
         {/* Text Paste Mode */}
         {textPasteMode && (
-          <div className="border-t border-border/50 p-3 space-y-3">
+          <div className="border-t border-border/50 p-3 space-y-3 max-h-[50vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4" />
