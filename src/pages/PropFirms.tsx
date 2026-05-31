@@ -417,8 +417,8 @@ export default function PropFirms() {
 
   // Helper for PNL color
   const getPnLColor = (pnl: number) => {
-    if (pnl > 0) return 'text-green-500';
-    if (pnl < 0) return 'text-red-500';
+    if (pnl > 0) return 'text-green-600 dark:text-green-400 font-semibold';
+    if (pnl < 0) return 'text-red-600 dark:text-red-400 font-semibold';
     return 'text-muted-foreground';
   };
 
@@ -754,11 +754,28 @@ export default function PropFirms() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <p className="text-base font-mono font-bold text-primary">
-                            {(group as any).fundedBalance > 0 
-                              ? `$${(group as any).fundedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-                              : '$0.00'}
-                          </p>
+                          <div className="text-right">
+                            <p className="text-[10px] text-muted-foreground">Bal</p>
+                            <p className="text-sm font-mono font-bold text-foreground">
+                              {(group as any).fundedBalance > 0
+                                ? `$${(group as any).fundedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                                : '$0.00'}
+                            </p>
+                            {(group as any).fundedBalance > 0 && (
+                              <>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">Eq</p>
+                                <p className={`text-sm font-mono font-bold ${
+                                  (group as any).fundedEquity > (group as any).fundedBalance
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : (group as any).fundedEquity < (group as any).fundedBalance
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : 'text-foreground'
+                                }`}>
+                                  ${(group as any).fundedEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                </p>
+                              </>
+                            )}
+                          </div>
                           {expandedGroups.has(group.name) ? (
                             <ChevronDown className="h-4 w-4 text-muted-foreground" />
                           ) : (
@@ -804,16 +821,35 @@ export default function PropFirms() {
                       </div>
                       
                       <div className="flex items-center gap-4 shrink-0">
-                        <div className="text-right">
-                          <p className="text-lg font-mono font-bold text-primary">
-                            {(group as any).fundedBalance > 0 
-                              ? `$${(group as any).fundedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-                              : '$0.00'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {(group as any).fundedBalance > 0 ? 'Funded Balance' : 'No funded capital'}
-                            {(group as any).evaluationCount > 0 && ` • ${(group as any).evaluationCount} eval${(group as any).evaluationCount !== 1 ? 's' : ''}`}
-                          </p>
+                        <div className="text-right space-y-0.5">
+                          {(group as any).fundedBalance > 0 ? (
+                            <>
+                              <p className="text-xs text-muted-foreground">Balance</p>
+                              <p className="text-base font-mono font-bold text-foreground">
+                                ${(group as any).fundedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">Equity</p>
+                              <p className={`text-base font-mono font-bold ${
+                                (group as any).fundedEquity > (group as any).fundedBalance
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : (group as any).fundedEquity < (group as any).fundedBalance
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-foreground'
+                              }`}>
+                                ${(group as any).fundedEquity.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-mono font-bold text-muted-foreground">$0.00</p>
+                              <p className="text-xs text-muted-foreground">No funded capital</p>
+                            </>
+                          )}
+                          {(group as any).evaluationCount > 0 && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {(group as any).evaluationCount} eval{(group as any).evaluationCount !== 1 ? 's' : ''}
+                            </p>
+                          )}
                         </div>
                         {expandedGroups.has(group.name) ? (
                           <ChevronDown className="h-4 w-4 text-muted-foreground" />
