@@ -146,6 +146,16 @@ export default function PropFirmDetail() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddTradeOpen, setIsAddTradeOpen] = useState(false);
+  const [targetWarningAcknowledged, setTargetWarningAcknowledged] = useState(false);
+
+  // Profit target hit detection
+  const isTargetHit = !!(
+    propFirm?.profit_target &&
+    propFirm.profit_target > 0 &&
+    propFirm?.current_profit !== null &&
+    propFirm?.current_profit !== undefined &&
+    propFirm.current_profit >= propFirm.profit_target
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -694,9 +704,14 @@ export default function PropFirmDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button onClick={() => setIsAddTradeOpen(true)} className="w-full lg:w-auto">
+          <Button
+            onClick={() => setIsAddTradeOpen(true)}
+            className={`w-full lg:w-auto ${isTargetHit ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20" : ""}`}
+            variant={isTargetHit ? "outline" : "default"}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Trade
+            {isTargetHit && <span className="ml-1.5 text-xs">⚠️</span>}
           </Button>
           <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="w-full lg:w-auto">
             <Trash2 className="h-4 w-4 mr-2" />
@@ -1196,39 +1211,74 @@ export default function PropFirmDetail() {
         if (!open) {
           setAddTradeMode("manual");
           setParsedTradesToImport([]);
+          setTargetWarningAcknowledged(false);
         }
       }}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-h-[88vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
             <DialogTitle>Add Trade</DialogTitle>
           </DialogHeader>
-          <Tabs value={addTradeMode} onValueChange={(value) => setAddTradeMode(value as "manual" | "parser")} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="manual">Manual</TabsTrigger>
-              <TabsTrigger value="parser">Trade Parser</TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="manual">
-              <form onSubmit={handleAddTrade} className="space-y-4">
-                {/* Use shared TradeForm for manual entry */}
-                <TradeForm
-                  formData={tradeData}
-                  setFormData={setTradeData}
-                  onSubmitLabel={isLoading ? "Adding..." : "Add Trade"}
-                  onSubmitDisabled={isLoading}
+          {/* Profit target warning banner */}
+          {isTargetHit && (
+            <div className="mx-6 mb-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-2 shrink-0">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-500 text-base leading-none mt-0.5">⚠️</span>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Profit target reached</p>
+                  <p className="text-xs text-muted-foreground">
+                    Adding more trades may violate your prop firm rules. Make sure you understand the risk before continuing.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="target-ack"
+                  checked={targetWarningAcknowledged}
+                  onChange={e => setTargetWarningAcknowledged(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-amber-500 cursor-pointer"
                 />
-              </form>
-            </TabsContent>
+                <label htmlFor="target-ack" className="text-xs cursor-pointer text-muted-foreground">
+                  I understand — proceed anyway
+                </label>
+              </div>
+            </div>
+          )}
 
-            <TabsContent value="parser" className="space-y-4">
-              <TradeParser onTradesExtracted={setParsedTradesToImport} />
-              {parsedTradesToImport.length > 0 && (
-                <Button onClick={handleImportParsedTrades} disabled={isLoading} className="w-full">
-                  {isLoading ? "Importing..." : `Import ${parsedTradesToImport.length} Parsed Trade${parsedTradesToImport.length > 1 ? "s" : ""}`}
-                </Button>
-              )}
-            </TabsContent>
-          </Tabs>
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <Tabs value={addTradeMode} onValueChange={(value) => setAddTradeMode(value as "manual" | "parser")} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 bg-background pt-1">
+                <TabsTrigger value="manual">Manual</TabsTrigger>
+                <TabsTrigger value="parser">Trade Parser</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="manual">
+                <form onSubmit={handleAddTrade} className="space-y-4">
+                  <TradeForm
+                    formData={tradeData}
+                    setFormData={setTradeData}
+                    onSubmitLabel={isLoading ? "Adding..." : "Add Trade"}
+                    onSubmitDisabled={isLoading || (isTargetHit && !targetWarningAcknowledged)}
+                  />
+                </form>
+              </TabsContent>
+
+              <TabsContent value="parser" className="space-y-4">
+                <TradeParser onTradesExtracted={setParsedTradesToImport} />
+                {parsedTradesToImport.length > 0 && (
+                  <Button
+                    onClick={handleImportParsedTrades}
+                    disabled={isLoading || (isTargetHit && !targetWarningAcknowledged)}
+                    className="w-full"
+                  >
+                    {isLoading ? "Importing..." : `Import ${parsedTradesToImport.length} Parsed Trade${parsedTradesToImport.length > 1 ? "s" : ""}`}
+                  </Button>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         </DialogContent>
       </Dialog>
 
