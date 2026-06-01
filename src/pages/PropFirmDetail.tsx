@@ -804,7 +804,7 @@ export default function PropFirmDetail() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-mono text-primary">
+            <div className="text-2xl font-bold font-mono text-foreground">
               ${propFirm.balance?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
