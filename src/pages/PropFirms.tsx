@@ -243,9 +243,12 @@ export default function PropFirms() {
         const fileExt = personalScreenshot.name.split(".").pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage.from("prop-firm-screenshots").upload(fileName, personalScreenshot);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from("prop-firm-screenshots").getPublicUrl(fileName);
-        screenshotUrl = publicUrl;
+        if (uploadError) {
+          console.warn("[PropFirms] Screenshot upload failed (non-fatal):", uploadError.message);
+        } else {
+          const { data: { publicUrl } } = supabase.storage.from("prop-firm-screenshots").getPublicUrl(fileName);
+          screenshotUrl = publicUrl;
+        }
       }
 
       const balance = personalFormData.balance ? parseFloat(personalFormData.balance) : 0;
@@ -299,7 +302,9 @@ export default function PropFirms() {
       setPersonalScreenshot(null);
       fetchPropFirms();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to add personal account", variant: "destructive" });
+      console.error("[PropFirms] Failed to add personal account:", error);
+      const msg = error instanceof Error ? error.message : (error as any)?.message ?? "Unknown error";
+      toast({ title: "Error", description: `Failed to add personal account: ${msg}`, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -320,9 +325,12 @@ export default function PropFirms() {
         const fileExt = propFirmScreenshot.name.split(".").pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage.from("prop-firm-screenshots").upload(fileName, propFirmScreenshot);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from("prop-firm-screenshots").getPublicUrl(fileName);
-        screenshotUrl = publicUrl;
+        if (uploadError) {
+          console.warn("[PropFirms] Screenshot upload failed (non-fatal):", uploadError.message);
+        } else {
+          const { data: { publicUrl } } = supabase.storage.from("prop-firm-screenshots").getPublicUrl(fileName);
+          screenshotUrl = publicUrl;
+        }
       }
 
       const balance = propFirmFormData.balance ? parseFloat(propFirmFormData.balance) : 0;
@@ -381,7 +389,9 @@ export default function PropFirms() {
       fetchPropFirms();
       refreshCycles(); // Refresh cycles after adding a new funded account
     } catch (error) {
-      toast({ title: "Error", description: "Failed to add prop firm", variant: "destructive" });
+      console.error("[PropFirms] Failed to add prop firm:", error);
+      const msg = error instanceof Error ? error.message : (error as any)?.message ?? "Unknown error";
+      toast({ title: "Error", description: `Failed to add prop firm: ${msg}`, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
