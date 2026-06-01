@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, X, Play, TrendingUp, TrendingDown, AlertTriangle, Star, Save } from "lucide-react";
+import { ArrowLeft, Upload, X, Play, TrendingUp, TrendingDown, AlertTriangle, Star, Save, Pencil, Target, BarChart2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { getEmotionTagStyle, getMistakeTagLabel, EMOTION_TAGS } from "@/lib/tradeCalculations";
+import { getEmotionTagStyle, getMistakeTagLabel, EMOTION_TAGS, calculateRMultiple, calculateRiskReward } from "@/lib/tradeCalculations";
 
 interface Trade {
   id: string;
@@ -303,14 +303,25 @@ export default function JournalDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/app/trade-journal")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Trade Details</h1>
-          <p className="text-muted-foreground">View and manage your trade</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate("/app/trade-journal")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">Trade Details</h1>
+            <p className="text-muted-foreground text-sm">View and manage your trade</p>
+          </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={() => navigate(`/app/trade-journal?edit=${trade.id}`)}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Edit
+        </Button>
       </div>
 
       {/* Trade Details Card */}
@@ -437,28 +448,85 @@ export default function JournalDetail() {
         </CardContent>
       </Card>
 
-      {/* Analytics Block */}
-      <Card className="glow-card">
-        <CardHeader>
-          <CardTitle>Trade Analytics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Win/Loss</p>
-              <p className="text-2xl font-bold">{isProfit ? "WIN" : "LOSS"}</p>
-            </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Amount</p>
-              <p className="text-2xl font-bold">${Math.abs(trade.profit).toFixed(2)}</p>
-            </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Session</p>
-              <p className="text-2xl font-bold">{trade.session || "N/A"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Analytics Block — R-Multiple + R:R */}
+      {(() => {
+        const tradeForCalc = {
+          ...trade,
+          pair: trade.pair,
+          entry_price: trade.entry_price,
+          stop_loss: trade.stop_loss,
+          take_profit: trade.take_profit,
+          close_price: trade.close_price,
+          volume: trade.volume,
+          trade_type: trade.trade_type,
+        };
+        const rMultiple   = calculateRMultiple(tradeForCalc);
+        const riskReward  = calculateRiskReward(tradeForCalc);
+        const pnlSign     = isProfit ? "+" : "";
+
+        return (
+          <Card className="glow-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BarChart2 className="h-4 w-4 text-primary" />
+                Trade Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Outcome */}
+                <div className={`text-center p-3 rounded-lg border ${isProfit ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20"}`}>
+                  <p className="text-xs text-muted-foreground mb-1">Outcome</p>
+                  <p className={`text-xl font-bold ${isProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                    {isProfit ? "WIN" : "LOSS"}
+                  </p>
+                </div>
+
+                {/* P&L */}
+                <div className="text-center p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">P&L</p>
+                  <p className={`text-xl font-bold font-mono ${isProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                    {pnlSign}${Math.abs(trade.profit).toFixed(2)}
+                  </p>
+                </div>
+
+                {/* R-Multiple */}
+                <div className="text-center p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Target className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">R-Multiple</p>
+                  </div>
+                  {rMultiple !== null ? (
+                    <p className={`text-xl font-bold font-mono ${rMultiple >= 1 ? "text-green-600 dark:text-green-400" : rMultiple > 0 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                      {rMultiple >= 0 ? "+" : ""}{rMultiple.toFixed(2)}R
+                    </p>
+                  ) : (
+                    <p className="text-xl font-bold text-muted-foreground">—</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {rMultiple === null ? "needs entry+SL" : rMultiple >= 1 ? "target hit" : "sub 1R"}
+                  </p>
+                </div>
+
+                {/* Risk/Reward */}
+                <div className="text-center p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">R:R Ratio</p>
+                  {riskReward !== null ? (
+                    <p className={`text-xl font-bold font-mono ${riskReward >= 2 ? "text-green-600 dark:text-green-400" : riskReward >= 1 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                      1:{riskReward.toFixed(1)}
+                    </p>
+                  ) : (
+                    <p className="text-xl font-bold text-muted-foreground">—</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {riskReward === null ? "needs TP+SL" : riskReward >= 2 ? "good setup" : "low RR"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Trade Review Section */}
       <Card className="glow-card">
