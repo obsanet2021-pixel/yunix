@@ -813,10 +813,16 @@ export default function PropFirmDetail() {
         <Card className="glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Equity</CardTitle>
-            <TrendingUp className="h-4 w-4 text-secondary" />
+            <TrendingUp className={`h-4 w-4 ${(propFirm.current_profit || 0) >= 0 ? "text-green-500" : "text-red-500"}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-mono text-secondary">
+            <div className={`text-2xl font-bold font-mono ${
+              (propFirm.current_profit || 0) > 0
+                ? "text-green-600 dark:text-green-400"
+                : (propFirm.current_profit || 0) < 0
+                ? "text-red-600 dark:text-red-400"
+                : "text-foreground"
+            }`}>
               ${((propFirm.balance || 0) + (propFirm.current_profit || 0)).toFixed(2)}
             </div>
           </CardContent>
@@ -825,11 +831,17 @@ export default function PropFirmDetail() {
         <Card className="glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Current Profit</CardTitle>
-            <Target className="h-4 w-4 text-secondary" />
+            <Target className={`h-4 w-4 ${(propFirm.current_profit || 0) >= 0 ? "text-green-500" : "text-red-500"}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-mono text-secondary">
-              ${propFirm.current_profit?.toFixed(2) || "0.00"}
+            <div className={`text-2xl font-bold font-mono ${
+              (propFirm.current_profit || 0) > 0
+                ? "text-green-600 dark:text-green-400"
+                : (propFirm.current_profit || 0) < 0
+                ? "text-red-600 dark:text-red-400"
+                : "text-foreground"
+            }`}>
+              {(propFirm.current_profit || 0) > 0 ? "+" : ""}${propFirm.current_profit?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -837,10 +849,14 @@ export default function PropFirmDetail() {
         <Card className="glow-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-secondary" />
+            <TrendingUp className={`h-4 w-4 ${winRate >= 50 ? "text-green-500" : "text-red-500"}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-mono text-secondary">
+            <div className={`text-2xl font-bold font-mono ${
+              winRate >= 60 ? "text-green-600 dark:text-green-400"
+              : winRate >= 40 ? "text-amber-600 dark:text-amber-400"
+              : "text-red-600 dark:text-red-400"
+            }`}>
               {winRate.toFixed(1)}%
             </div>
           </CardContent>
@@ -858,7 +874,7 @@ export default function PropFirmDetail() {
               <span className="text-sm text-muted-foreground">
                 ${propFirm.current_profit?.toFixed(2) || "0.00"} / ${propFirm.profit_target.toFixed(2)}
               </span>
-              <span className="text-sm font-mono text-secondary">
+              <span className="text-sm font-mono text-foreground font-medium">
                 {calculateProgress().toFixed(1)}%
               </span>
             </div>
@@ -898,7 +914,7 @@ export default function PropFirmDetail() {
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Winning Trades</p>
-              <p className="text-2xl font-bold font-mono text-secondary">{winningTrades}</p>
+              <p className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">{winningTrades}</p>
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Losing Trades</p>
@@ -906,8 +922,8 @@ export default function PropFirmDetail() {
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Best Trade</p>
-              <p className="text-2xl font-bold font-mono text-secondary">
-                ${bestTrade.toFixed(2)}
+              <p className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">
+                +${bestTrade.toFixed(2)}
               </p>
             </div>
             <div className="space-y-2">
@@ -918,7 +934,7 @@ export default function PropFirmDetail() {
             </div>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Avg Profit/Loss</p>
-              <p className={`text-2xl font-bold font-mono ${avgProfit >= 0 ? 'text-secondary' : 'text-destructive'}`}>
+              <p className={`text-2xl font-bold font-mono ${avgProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                 {avgProfit >= 0 ? '+' : ''}${avgProfit.toFixed(2)}
               </p>
             </div>
@@ -964,7 +980,7 @@ export default function PropFirmDetail() {
                             </Badge>
                           )}
                         </div>
-                        <div className={`flex items-center gap-2 ${isProfit ? 'text-secondary' : 'text-destructive'}`}>
+                        <div className={`flex items-center gap-2 ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           <Icon className="h-5 w-5" />
                           <span className="font-mono text-lg font-bold">
                             {isProfit ? '+' : ''}{Number(trade.profit).toFixed(2)}
