@@ -149,7 +149,7 @@ export default function Analytics() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase.from("trades")
-      .select("id, pair, profit, session, emotion, trade_date, prop_firm_id, cycle_id, entry_price, stop_loss, take_profit, close_price, volume, trade_type, rule_broken, mistake_tags, emotion_tag")
+      .select("id, pair, profit, session, emotion, trade_date, prop_firm_id, cycle_id, entry_price, stop_loss, take_profit, close_price, volume, trade_type, rule_broken, mistake_tags, emotion_tag, playbook_id")
       .eq("user_id", user.id).order("trade_date", { ascending: true });
     setTrades((data || []) as Trade[]);
   };
