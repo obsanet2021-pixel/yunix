@@ -16,6 +16,7 @@ import PropFirmFilter from "@/components/PropFirmFilter";
 import { CycleFilter } from "@/components/propfirms/CycleFilter";
 import { useAllCyclesForUser } from "@/hooks/useAccountCycles";
 import { useToast } from "@/hooks/use-toast";
+import { usePlaybooks } from "@/hooks/usePlaybooks";
 import { 
   calculateExpectancy, calculateAverageR, calculateAverageRiskReward,
   calculateMistakeCost, countMistakesByType, getLossByMistakeType, getMistakeTagLabel,
@@ -103,6 +104,8 @@ export default function Analytics() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [propFirms, setPropFirms] = useState<PropFirm[]>([]);
   const [timeRange, setTimeRange] = useState("30");
+  const [filterPlaybookId, setFilterPlaybookId] = useState("all");
+  const { playbooks } = usePlaybooks();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedPropFirm, setSelectedPropFirm] = useState<string>("all");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
@@ -165,6 +168,7 @@ export default function Analytics() {
   };
 
   const filteredTrades = trades.filter((trade) => {
+    if (filterPlaybookId !== "all" && (trade as any).playbook_id !== filterPlaybookId) return false;
     if (timeRange !== "all") {
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - parseInt(timeRange));
@@ -483,6 +487,19 @@ export default function Analytics() {
           <p className="text-sm text-muted-foreground">Performance analysis and insights</p>
         </div>
         <div className="flex items-center gap-2">
+          {playbooks.length > 0 && (
+            <Select value={filterPlaybookId} onValueChange={setFilterPlaybookId}>
+              <SelectTrigger className="w-full sm:w-[160px] h-9">
+                <SelectValue placeholder="All Playbooks" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Playbooks</SelectItem>
+                {playbooks.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
             variant={isRealtime ? "default" : "outline"}
             size="sm"

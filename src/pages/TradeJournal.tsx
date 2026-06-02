@@ -599,6 +599,7 @@ export default function TradeJournal() {
         close_price: formData.close_price ? parseFloat(formData.close_price) : null,
         // Discipline tracking
         emotion_tag: formData.emotion_tag || null,
+        playbook_id: formData.playbook_id || null,
         rule_broken: formData.rule_broken,
         mistake_tags: formData.mistake_tags.length > 0 ? formData.mistake_tags : null,
       } as any);
@@ -684,6 +685,7 @@ export default function TradeJournal() {
       stop_loss: trade.stop_loss?.toString() || "",
       close_price: trade.close_price?.toString() || "",
       emotion_tag: trade.emotion_tag || "",
+      playbook_id: (trade as any).playbook_id || null,
       rule_broken: trade.rule_broken || false,
       mistake_tags: trade.mistake_tags || []
     });

@@ -35,6 +35,7 @@ const userNavigation = [
   { name: "AI Assistant", href: "/app/ai-chat", icon: MessageSquare },
   { name: "Sessions", href: "/app/sessions", icon: Clock },
   { name: "Courses", href: "/app/courses", icon: BookOpen },
+  { name: "Playbooks", href: "/app/playbooks", icon: BookOpen },
 ];
 
 // Rewards section - separate from main nav

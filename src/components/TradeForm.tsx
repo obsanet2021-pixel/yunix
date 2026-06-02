@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Upload, AlertTriangle, Loader2 } from "lucide-react";
 import { EMOTION_TAGS, MISTAKE_TAGS } from "@/lib/tradeCalculations";
+import { usePlaybooks, getPlaybookColorClass } from "@/hooks/usePlaybooks";
 
 interface Props {
   formData: any;
   setFormData: (d: any) => void;
+  showPlaybookSelector?: boolean;
   propFirms?: any[];
   getCyclesForFirm?: (id: string) => any[];
   getActiveCycleForFirm?: (id: string) => any | null;
@@ -43,8 +45,10 @@ export default function TradeForm({
   onHtmlUpload,
   onExcelUpload,
   isParsingFile = false,
+  showPlaybookSelector = true,
 }: Props) {
   const set = (patch: any) => setFormData({ ...formData, ...patch });
+  const { playbooks } = usePlaybooks();
 
   // Two-step firm → account selection
   const normalizeCase = (s: string) => s.trim().toLowerCase();
@@ -215,6 +219,34 @@ export default function TradeForm({
           <Input type="date" value={formData.trade_date || new Date().toISOString().split("T")[0]} onChange={e => set({ trade_date: e.target.value })} required />
         </div>
       </div>
+
+      <Separator />
+
+      {/* ── Playbook ── */}
+      {showPlaybookSelector && playbooks.length > 0 && (
+        <div className="space-y-2">
+          <Label>Playbook <span className="text-muted-foreground text-xs">(optional)</span></Label>
+          <Select
+            value={formData.playbook_id || "none"}
+            onValueChange={v => set({ playbook_id: v === "none" ? null : v })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Tag to a playbook..." />
+            </SelectTrigger>
+            <SelectContent className="z-50">
+              <SelectItem value="none">No playbook</SelectItem>
+              {playbooks.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${getPlaybookColorClass(p.color).split(" ")[0]}`} />
+                    <span>{p.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <Separator />
 

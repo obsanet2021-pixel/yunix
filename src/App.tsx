@@ -19,6 +19,7 @@ import Certificates from "./pages/Certificates";
 import EconomicCalendar from "./pages/EconomicCalendar";
 import AIChat from "./pages/AIChat";
 import Sessions from "./pages/Sessions";
+import Playbooks from "./pages/Playbooks";
 import Backtesting from "./pages/Backtesting";
 import BacktestSessions from "./pages/BacktestSessions";
 import BacktestReplay from "./pages/BacktestReplay";
@@ -119,6 +120,7 @@ const AppContent = () => {
         <Route path="calendar" element={<EconomicCalendar />} />
         <Route path="ai-chat" element={<AIChat />} />
         <Route path="sessions" element={<Sessions />} />
+        <Route path="playbooks" element={<Playbooks />} />
         <Route path="courses" element={<Courses />} />
         <Route path="courses/:slug" element={<CourseView />} />
         <Route path="profile" element={<UserProfile />} />
