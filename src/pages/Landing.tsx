@@ -306,7 +306,7 @@ export default function Landing() {
           {/* Copyright */}
           <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2025 YUNIX. All rights reserved.
+              © 2025 YUNIX. All rights reserved.| Developed by <a href="https://obsan2021.github.io/clover-digital/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Clover Digital</a>
             </p>
           </div>
         </div>
