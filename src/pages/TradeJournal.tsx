@@ -1070,7 +1070,7 @@ export default function TradeJournal() {
                           )}
                         </div>
                       </div>
-                      <div className={`flex items-center gap-2 sm:hidden ${isProfit ? 'text-secondary' : 'text-destructive'}`}>
+                      <div className={`flex items-center gap-2 sm:hidden ${isProfit ? 'text-emerald-500' : 'text-destructive'}`}>
                         <Icon className="h-4 w-4" />
                         <span className="font-mono text-lg font-bold">
                           {isProfit ? '+' : ''}{Number(trade.profit).toFixed(2)}
@@ -1078,7 +1078,7 @@ export default function TradeJournal() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
-                      <div className={`hidden sm:flex items-center gap-2 ${isProfit ? 'text-secondary' : 'text-destructive'}`}>
+                      <div className={`hidden sm:flex items-center gap-2 ${isProfit ? 'text-emerald-500' : 'text-destructive'}`}>
                         <Icon className="h-5 w-5" />
                         <span className="font-mono text-xl font-bold">
                           {isProfit ? '+' : ''}{Number(trade.profit).toFixed(2)}
