@@ -111,7 +111,7 @@ export default function HomePage() {
       {/* Skip to content link for accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:outline-none"
       >
         Skip to main content
       </a>
@@ -124,20 +124,20 @@ export default function HomePage() {
       <ScrollProgress />
 
       {/* Navigation */}
-      <header id="navbar" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${isScrolled ? 'bg-background/85 backdrop-blur-2xl border-b border-border' : 'bg-transparent border-b border-transparent'}`} role="banner">
+      <header id="navbar" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${isScrolled ? 'bg-background/85 backdrop-blur-2xl border-b border-border' : 'bg-transparent border-b border-transparent'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <YunixLogo />
             <nav className="hidden md:flex items-center gap-2" role="navigation" aria-label="Main navigation">
-              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Features</a>
-              <a href="#compare" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Compare</a>
-              <a href="#courses" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Courses</a>
-              <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Reviews</a>
-              <Link to="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">Pricing</Link>
+              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">Features</a>
+              <a href="#compare" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">Compare</a>
+              <a href="#courses" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">Courses</a>
+              <a href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">Testimonials</a>
+              <Link to="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring">Pricing</Link>
             </nav>
             <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-5 py-2 h-10 text-sm font-medium text-muted-foreground border border-border hover:text-foreground hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">Sign In</Button>
-              <Button onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-6 py-2 h-10 text-sm font-semibold bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-lg shadow-primary/25 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">Start Free →</Button>
+              <Button variant="ghost" onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-5 py-2 h-10 text-sm font-medium text-muted-foreground border border-border hover:text-foreground">Sign In</Button>
+              <Button onClick={() => navigate("/auth")} className="hidden sm:inline-flex px-6 py-2 h-10 text-sm font-semibold bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90">Get Started</Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -214,7 +214,7 @@ export default function HomePage() {
               ))}
             </div>
             <div className="mt-12 text-center">
-              <p className="text-muted-foreground">More courses at <Link to="/courses" className="text-primary hover:underline font-semibold inline-flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">YUNIX Education</Link></p>
+              <p className="text-muted-foreground">More courses at <Link to="/courses" className="text-primary hover:underline font-semibold inline-flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded">YUNIX Education</Link></p>
             </div>
           </div>
         </section>
@@ -322,7 +322,7 @@ export default function HomePage() {
           {/* Copyright */}
           <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2026 YUNIX. All rights reserved.
+              © 2025 YUNIX. All rights reserved. | Developed by <a href="https://obsan2021.github.io/clover-digital/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Clover Digital</a>
             </p>
             <p className="text-sm text-muted-foreground font-mono text-xs">
               v2.0 · Built for traders, by traders
