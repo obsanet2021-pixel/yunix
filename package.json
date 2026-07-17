@@ -15,7 +15,13 @@
     "*.{js,ts,tsx}": [
       "eslint --fix"
     ],
-    ".env*": [
+    ".env": [
+      "sh -c 'echo \"❌ Do not commit .env files\" && exit 1'"
+    ],
+    ".env.local": [
+      "sh -c 'echo \"❌ Do not commit .env files\" && exit 1'"
+    ],
+    ".env.production": [
       "sh -c 'echo \"❌ Do not commit .env files\" && exit 1'"
     ]
   },
