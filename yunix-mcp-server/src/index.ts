@@ -54,8 +54,13 @@ async function runHTTP(): Promise<void> {
   });
 
   const port = parseInt(process.env.PORT || "3000", 10);
+<<<<<<< HEAD
   app.listen(port, () => {
     console.error(`${SERVER_NAME} running on http://localhost:${port}/mcp`);
+=======
+  app.listen(port, "0.0.0.0", () => {
+    console.error(`${SERVER_NAME} running on http://0.0.0.0:${port}/mcp`);
+>>>>>>> ea99e61 (Prepare Yunix for deployment and MCP server support)
   });
 }
 
