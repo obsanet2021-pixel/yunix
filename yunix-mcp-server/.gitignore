@@ -3,12 +3,9 @@ node_modules/
 
 # Environment variables
 .env
-<<<<<<< HEAD
-=======
 .env.local
 .env.*
 !.env.example
->>>>>>> ea99e61 (Prepare Yunix for deployment and MCP server support)
 
 # Build output
 dist/
